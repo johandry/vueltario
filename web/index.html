@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vueltario — Cuban Dance Move Catalog</title>
+  <meta name="description" content="Save, identify, time, and practice Cuban dance moves (vueltas) across casino, Timba, and rueda de casino.">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="brand-block">
+      <h1 class="site-title">Vueltario</h1>
+      <span class="site-subtitle">Casino · Timba · Rueda de Casino</span>
+    </div>
+
+    <nav class="main-nav" aria-label="Primary navigation">
+      <button type="button" class="nav-tab active" data-view="personal" id="tab-personal">My Vueltas</button>
+      <button type="button" class="nav-tab" data-view="community" id="tab-community">Community Catalog</button>
+      <button type="button" class="nav-tab" data-view="taxonomy" id="tab-taxonomy">Move Taxonomy</button>
+      <button type="button" class="nav-tab hidden" data-view="admin" id="tab-admin">Admin &amp; @cubansocial.sd</button>
+    </nav>
+
+    <div class="auth-bar" id="auth-bar">
+      <span class="user-badge hidden" id="user-badge"></span>
+      <button type="button" class="btn btn-ghost hidden" id="btn-export" title="Export personal catalog as JSON">Export JSON</button>
+      <button type="button" class="btn btn-primary" id="btn-open-login">Sign In</button>
+      <button type="button" class="btn btn-secondary hidden" id="btn-logout">Sign Out</button>
+    </div>
+  </header>
+
+  <div id="status-toast" class="status-banner hidden" role="status" aria-live="polite"></div>
+
+  <main id="main-content" class="main-container" tabindex="-1">
+    <!-- Personal Collection View -->
+    <section id="view-personal" class="view-section">
+      <div id="personal-guest-prompt" class="card guest-card hidden">
+        <h2>Personal Vuelta Collection</h2>
+        <p>Sign in as an administrator or invited contributor to save video links, mark vuelta timestamps, keep private practice notes, and propose community entries.</p>
+        <div class="inline-actions">
+          <button type="button" class="btn btn-primary" id="btn-guest-signin">Sign In</button>
+          <button type="button" class="btn btn-secondary" id="btn-guest-community">Browse Public Catalog</button>
+        </div>
+      </div>
+
+      <div id="personal-workspace" class="hidden">
+        <!-- Immediate Link Save Bar -->
+        <form id="form-save-link" class="card ingest-bar" novalidate>
+          <div class="ingest-field">
+            <label for="input-save-url" class="field-label">Save a social dance link (YouTube, TikTok, Facebook, Instagram)</label>
+            <div class="ingest-row">
+              <input id="input-save-url" name="url" type="url" required
+                placeholder="https://www.youtube.com/watch?v=... or TikTok / Instagram / Facebook URL"
+                autocomplete="off">
+              <button type="submit" class="btn btn-primary" id="btn-save-url">Save Link</button>
+            </div>
+            <p id="ingest-feedback" class="helper-text" aria-live="polite"></p>
+          </div>
+        </form>
+
+        <!-- Search & Filter Controls -->
+        <form id="form-search" class="filter-bar card" role="search">
+          <div class="filter-group grow">
+            <label for="filter-q" class="sr-only">Search moves, aliases, titles, or creators</label>
+            <input id="filter-q" type="search" placeholder="Search canonical move, alias (e.g. Sácala, Adiós), title, or creator…">
+          </div>
+          <div class="filter-group">
+            <label for="filter-platform" class="sr-only">Platform</label>
+            <select id="filter-platform">
+              <option value="">All platforms</option>
+              <option value="youtube">YouTube</option>
+              <option value="tiktok">TikTok</option>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="filter-move" class="sr-only">Move</label>
+            <select id="filter-move">
+              <option value="">All moves</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="filter-visibility" class="sr-only">Visibility</label>
+            <select id="filter-visibility">
+              <option value="">All states</option>
+              <option value="private">Private</option>
+              <option value="submitted">Submitted</option>
+              <option value="published">Published</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="filter-asset" class="sr-only">Media Asset</label>
+            <select id="filter-asset">
+              <option value="">Any media</option>
+              <option value="true">Has authorized file</option>
+              <option value="false">Link / embed only</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-secondary">Filter</button>
+        </form>
+
+        <!-- Master / Detail Split -->
+        <div class="catalog-split">
+          <div class="entry-list-pane" aria-label="Saved entries">
+            <div id="entry-list" class="entry-list"></div>
+          </div>
+
+          <div class="entry-detail-pane" id="entry-detail-pane" aria-label="Selected entry details">
+            <div class="card empty-detail" id="empty-detail-msg">
+              <p>Select a saved entry or paste a link above to start identifying and timing vueltas.</p>
+              <p class="helper-text">Keyboard shortcuts in detail view (outside text fields): <kbd>[</kbd> Mark Start · <kbd>]</kbd> Mark End · <kbd>P</kbd> Preview Segment</p>
+            </div>
+            <div id="entry-detail-content" class="card hidden"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Community Public Catalog View -->
+    <section id="view-community" class="view-section hidden">
+      <div class="card section-header-card">
+        <div>
+          <h2>Curated Community Catalog</h2>
+          <p class="helper-text">Approved publicuelta references celebrating original Cuban dance creators. Private member notes are never exposed.</p>
+        </div>
+        <form id="form-public-search" class="inline-search" role="search">
+          <label for="public-q" class="sr-only">Search community catalog</label>
+          <input id="public-q" type="search" placeholder="Search move or creator…">
+          <select id="public-platform" aria-label="Filter community platform">
+            <option value="">All platforms</option>
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+          </select>
+          <button type="submit" class="btn btn-secondary">Search</button>
+        </form>
+      </div>
+      <div id="public-catalog-list" class="public-grid"></div>
+    </section>
+
+    <!-- Move Taxonomy View -->
+    <section id="view-taxonomy" class="view-section hidden">
+      <div class="taxonomy-layout">
+        <div class="card">
+          <h2>Cuban Dance Move Taxonomy</h2>
+          <p class="helper-text">Canonical Spanish move names, regional/school aliases (collisions flagged for review instead of silent merges), and ordered combinations.</p>
+          <div class="filter-row">
+            <label for="taxonomy-search" class="sr-only">Filter taxonomy</label>
+            <input id="taxonomy-search" type="search" placeholder="Filter moves or aliases…">
+          </div>
+          <div id="taxonomy-list" class="taxonomy-list"></div>
+        </div>
+
+        <div class="card" id="taxonomy-editor-card">
+          <h3>Add Move or Combination</h3>
+          <form id="form-create-move">
+            <label class="field-label" for="move-name">Canonical Spanish Name</label>
+            <input id="move-name" required placeholder="e.g. Setenta con alarde">
+
+            <label class="field-label" for="move-kind">Kind</label>
+            <select id="move-kind">
+              <option value="move">Single Move (Vuelta)</option>
+              <option value="combination">Ordered Combination</option>
+            </select>
+
+            <label class="field-label" for="move-styles">Style Tags (comma-separated)</label>
+            <input id="move-styles" placeholder="casino, rueda, timba" value="casino">
+
+            <label class="field-label" for="move-desc">Notes / Description</label>
+            <textarea id="move-desc" rows="2" placeholder="Optional timing, lead/follow cue, or regional context"></textarea>
+
+            <div id="combo-steps-box" class="hidden">
+              <label class="field-label" for="combo-step-ids">Ordered Step Move IDs (select below to append)</label>
+              <div class="inline-actions">
+                <select id="combo-step-picker"></select>
+                <button type="button" class="btn btn-secondary" id="btn-append-step">+ Add Step</button>
+              </div>
+              <ol id="combo-step-list" class="step-preview-list"></ol>
+            </div>
+
+            <button type="submit" class="btn btn-primary full-width">Save Term</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Administrator Moderation & Instagram Publishing Studio -->
+    <section id="view-admin" class="view-section hidden">
+      <div class="admin-grid">
+        <div class="card">
+          <h2>Community Moderation Queue</h2>
+          <p class="helper-text">Approve, request edits, or reject member submissions. Approving a public submission never triggers Instagram publishing automatically.</p>
+          <div id="admin-submissions-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Invite Contributor</h2>
+          <p class="helper-text">Generate a single-use invitation code for a community member or trusted contributor.</p>
+          <form id="form-invite" class="stack-form">
+            <label class="field-label" for="invite-email">Invitee Email</label>
+            <input id="invite-email" type="email" required placeholder="dancer@example.com">
+            <label class="field-label" for="invite-role">Role</label>
+            <select id="invite-role">
+              <option value="member">Member</option>
+              <option value="trusted_contributor">Trusted Contributor</option>
+            </select>
+            <button type="submit" class="btn btn-secondary">Generate Invite Code</button>
+            <output id="invite-output" class="code-box hidden"></output>
+          </form>
+        </div>
+      </div>
+
+      <div class="card admin-pub-card">
+        <div class="section-title-row">
+          <div>
+            <h2>Instagram Publishing Studio — <span id="ig-dest-label">@cubansocial.sd</span></h2>
+            <p class="helper-text">Dash-separated labels (<code>#CubanSocial-Enchufla</code>) are preserved honestly as labels, not claimed as single clickable hashtags. Underscore companions require explicit opt-in and review.</p>
+          </div>
+          <button type="button" class="btn btn-secondary" id="btn-refresh-pubs">Refresh Queue</button>
+        </div>
+        <div id="admin-publications-list" class="pub-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Sign In / Register Dialog -->
+  <dialog id="auth-dialog" class="modal-dialog" aria-labelledby="auth-dialog-title">
+    <form id="form-auth" method="dialog" class="stack-form">
+      <div class="modal-header">
+        <h2 id="auth-dialog-title">Sign In to Vueltario</h2>
+        <button type="button" class="btn-icon" id="btn-close-auth" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="mode-switch">
+        <button type="button" class="btn btn-secondary active" id="auth-mode-login">Sign In</button>
+        <button type="button" class="btn btn-ghost" id="auth-mode-register">Accept Invite</button>
+      </div>
+      <div id="register-only-fields" class="hidden stack-form">
+        <label class="field-label" for="auth-invite">Invitation Code</label>
+        <input id="auth-invite" autocomplete="off" placeholder="Paste invite code">
+        <label class="field-label" for="auth-display-name">Display Name</label>
+        <input id="auth-display-name" placeholder="Your name">
+      </div>
+      <label class="field-label" for="auth-email">Email</label>
+      <input id="auth-email" type="email" required autocomplete="username" placeholder="admin@vueltario.com">
+      <label class="field-label" for="auth-password">Password</label>
+      <input id="auth-password" type="password" required autocomplete="current-password">
+      <p id="auth-error" class="error-text hidden" role="alert"></p>
+      <div class="inline-actions end">
+        <button type="submit" class="btn btn-primary" id="btn-submit-auth">Continue</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vueltario}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vueltario_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-vueltario}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vueltario} -d ${POSTGRES_DB:-vueltario}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["serve"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VUELTARIO_ADDR: ":8080"
+      VUELTARIO_DB_DRIVER: "postgres"
+      VUELTARIO_DATABASE_URL: "postgres://${POSTGRES_USER:-vueltario}:${POSTGRES_PASSWORD:-vueltario_dev_password}@postgres:5432/${POSTGRES_DB:-vueltario}?sslmode=disable"
+      VUELTARIO_STORAGE_ROOT: "/var/lib/vueltario/storage"
+      VUELTARIO_ADMIN_EMAIL: "${VUELTARIO_ADMIN_EMAIL:-admin@vueltario.com}"
+      VUELTARIO_ADMIN_PASSWORD: "${VUELTARIO_ADMIN_PASSWORD:-change-me-immediately}"
+      VUELTARIO_BASE_URL: "${VUELTARIO_BASE_URL:-http://localhost:8080}"
+    ports:
+      - "${VUELTARIO_PORT:-8080}:8080"
+    volumes:
+      - media_storage:/var/lib/vueltario/storage
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["worker"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VUELTARIO_DB_DRIVER: "postgres"
+      VUELTARIO_DATABASE_URL: "postgres://${POSTGRES_USER:-vueltario}:${POSTGRES_PASSWORD:-vueltario_dev_password}@postgres:5432/${POSTGRES_DB:-vueltario}?sslmode=disable"
+      VUELTARIO_STORAGE_ROOT: "/var/lib/vueltario/storage"
+    volumes:
+      - media_storage:/var/lib/vueltario/storage
+
+volumes:
+  postgres_data:
+  media_storage:
