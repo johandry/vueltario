@@ -89,6 +89,47 @@ This starts PostgreSQL 16, runs migrations automatically, and separates the `ser
 
 ---
 
+## Desktop Publishing Studio (`vueltario-desktop`)
+
+`vueltario-desktop` is the Wails v2 native desktop GUI for administrator Instagram publishing to `@cubansocial.sd`. It binds directly to the same Go domain, media, and publishing services as the CLI (`DESK-01` — zero duplicated validation or caption/hash logic).
+
+### Building & Launching
+
+```bash
+# Option 1: Build standalone desktop binary via Go / Make
+make build-desktop
+./bin/vueltario-desktop
+
+# Option 2: Package a native OS app bundle (.app on macOS / .exe on Windows) when the Wails v2 CLI is installed
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
+wails build -s -o vueltario-desktop
+```
+
+### Configuration & Database Sharing
+
+`vueltario-desktop` reads the exact same `VUELTARIO_*` environment variables as `vueltario` (see [`.env.example`](./.env.example)):
+
+- **Local SQLite (default):** Uses `./data/vueltario.db` and `./data/storage` out of the box—changes made in `vueltario-desktop` and the `vueltario` CLI share the same catalog, media blobs, and publication queue.
+- **Shared PostgreSQL:** Set `VUELTARIO_DB_DRIVER=postgres` and `VUELTARIO_DATABASE_URL=postgres://...` before launching `vueltario-desktop` to work against a shared PostgreSQL deployment.
+
+### Authentication & Keychain Storage
+
+1. Launch `./bin/vueltario-desktop` and sign in with your administrator email and password (defaults locally to `admin@vueltario.com` / `vueltario-local-admin`).
+2. Authentication runs an RFC 7636 `S256` PKCE exchange and stores the session token in your **OS Keychain** (`com.vueltario.desktop` via macOS Keychain, Windows Credential Manager, or Linux Secret Service)—never in plaintext files.
+3. Subsequent launches and app updates automatically restore your active session until you click **Sign Out**.
+
+### Studio Workflow
+
+1. **Batch Workflows tab:** Paste multiple YouTube, TikTok, Facebook, or Instagram URLs to ingest in bulk (per-item errors are isolated), or select catalog entries to generate publication drafts in a batch.
+2. **Queue & Draft Editor tab:**
+   - Review the **Asset & Mode Preview** (external MP4/MOV/WebM upload vs. manual Instagram native-repost handoff).
+   - Verify or record **Rights & Attribution** (both video redistribution and music clearance are required before external uploads can be approved).
+   - Edit the caption, optional first comment, or opt-in underscore companion hashtags (`#CubanSocial_Move` alongside `#CubanSocial-Move`). Saving any edit automatically invalidates prior approval (`PUB-03`).
+   - Confirm the destination account (`@cubansocial.sd`), click **Approve Exact SHA-256**, run a **Dry-Run Check**, and click **Execute Publish** (or **Reconcile** if a network timeout left a remote container in `outcome_unknown`).
+3. **Publication History tab:** Audit completed publications, result permalinks, and native-repost handoffs.
+
+---
+
 ## Security, Rights & Capability Guarantees
 
 - **Strict SSRF protection** (`internal/netguard`): allowlisted social/API hosts only, redirect cap with per-hop revalidation, DNS/IP check blocking loopback, RFC1918 private networks, CGNAT, and cloud metadata (`169.254.169.254`).
