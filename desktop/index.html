@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vueltario Studio — @cubansocial.sd Desktop Publisher</title>
+  <link rel="stylesheet" href="/css/desktop.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Vueltario Desktop Studio</h1>
+      <span class="sub">Wails v2 · Shared Go Publishing Core · OS Keychain Auth</span>
+    </div>
+    <nav class="tabs" aria-label="Studio navigation">
+      <button type="button" class="tab active" data-panel="queue">Queue &amp; Draft Editor</button>
+      <button type="button" class="tab" data-panel="batch">Batch Workflows</button>
+      <button type="button" class="tab" data-panel="history">Publication History</button>
+    </nav>
+    <div class="session-box">
+      <span id="session-label" class="pill">Signed out</span>
+      <button type="button" id="btn-logout" class="btn btn-ghost hidden">Sign Out</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner hidden" role="status" aria-live="polite"></div>
+
+  <main class="workspace">
+    <!-- PKCE Sign-In Gate (Credentials stored in OS Keychain, never plaintext) -->
+    <section id="login-gate" class="card login-card">
+      <h2>Administrator Sign In (PKCE + OS Keychain)</h2>
+      <p class="muted">Session tokens are negotiated with S256 PKCE and stored in your operating system keychain.</p>
+      <form id="form-login" class="stack">
+        <label for="login-email">Administrator Email</label>
+        <input id="login-email" type="email" required value="admin@vueltario.com">
+        <label for="login-pass">Password</label>
+        <input id="login-pass" type="password" required placeholder="Administrator password">
+        <button type="submit" class="btn btn-primary">Authenticate via PKCE</button>
+      </form>
+    </section>
+
+    <!-- Panel 1: Queue, Draft Editor, Asset Preview, Rights Checklist & Destination Confirmation -->
+    <section id="panel-queue" class="panel hidden">
+      <div class="split-grid">
+        <aside class="card queue-col" aria-label="Publication queue">
+          <div class="row-between">
+            <h2>Active Queue</h2>
+            <button type="button" id="btn-reload-queue" class="btn btn-sm">Refresh</button>
+          </div>
+          <div id="queue-list" class="item-list"></div>
+        </aside>
+
+        <div class="card editor-col" id="draft-editor">
+          <p class="muted" id="editor-empty">Select a draft from the queue or create drafts from the Batch Workflows tab.</p>
+          <div id="editor-body" class="hidden stack">
+            <div class="row-between">
+              <div>
+                <h2 id="ed-title">Draft</h2>
+                <span id="ed-status" class="pill"></span>
+              </div>
+              <code id="ed-hash" class="hash-pill"></code>
+            </div>
+
+            <!-- Asset & Metadata Preview -->
+            <div class="subcard">
+              <h3>Asset &amp; Mode Preview</h3>
+              <p id="ed-asset-info" class="muted"></p>
+              <pre id="ed-repost-guide" class="code-block hidden"></pre>
+            </div>
+
+            <!-- Rights Checklist (Separate Video & Music Verification) -->
+            <div class="subcard">
+              <h3>Rights &amp; Attribution Checklist</h3>
+              <div class="checklist">
+                <label><input type="checkbox" id="chk-video-rights" disabled> Video redistribution rights cleared</label>
+                <label><input type="checkbox" id="chk-music-rights" disabled> Music rights cleared for Instagram</label>
+                <label><input type="checkbox" id="chk-companion"> Include explicit underscore companion hashtags (<code>#CubanSocial_Move</code>)</label>
+              </div>
+              <details class="quick-rights">
+                <summary>Record / Update Source Rights Clearance</summary>
+                <form id="form-rights" class="stack">
+                  <input id="rights-grantor" required placeholder="Grantor (Creator / Rights Holder)">
+                  <input id="rights-basis" required placeholder="Written permission / License reference">
+                  <div class="row">
+                    <label><input type="checkbox" id="rights-vid" checked> Video Cleared</label>
+                    <label><input type="checkbox" id="rights-mus" checked> Music Cleared</label>
+                  </div>
+                  <button type="submit" class="btn btn-sm">Save Rights Record</button>
+                </form>
+              </details>
+            </div>
+
+            <!-- Editable Caption & Optional First Comment -->
+            <div class="stack">
+              <label for="ed-caption">Instagram Caption (Dash labels preserved honestly; attribution protected)</label>
+              <textarea id="ed-caption" rows="6"></textarea>
+              <label for="ed-comment">Optional First Comment (Independent status &amp; retry)</label>
+              <input id="ed-comment" placeholder="Optional first comment">
+            </div>
+
+            <!-- Destination Confirmation & Exact-Hash Approval -->
+            <div class="subcard">
+              <h3>Destination Confirmation &amp; Exact-Hash Approval</h3>
+              <div class="row">
+                <label for="ed-dest-confirm">Confirm Destination Account:</label>
+                <input id="ed-dest-confirm" placeholder="@cubansocial.sd">
+              </div>
+              <div class="actions-bar">
+                <button type="button" id="btn-save-draft" class="btn">Save Edits</button>
+                <button type="button" id="btn-approve-draft" class="btn">Approve Exact SHA-256</button>
+                <button type="button" id="btn-dry-run" class="btn btn-ghost">Dry-Run Check</button>
+                <button type="button" id="btn-execute" class="btn btn-primary">Execute Publish</button>
+                <button type="button" id="btn-reconcile" class="btn btn-ghost">Reconcile</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 2: Batch Ingest & Batch Draft Creation -->
+    <section id="panel-batch" class="panel hidden">
+      <div class="split-grid">
+        <div class="card stack">
+          <h2>Batch Link Ingestion</h2>
+          <p class="muted">Paste one URL per line (YouTube, TikTok, Facebook, Instagram). Invalid or unsupported links are isolated without aborting the batch.</p>
+          <textarea id="batch-urls" rows="6" placeholder="https://www.youtube.com/watch?v=...\nhttps://www.tiktok.com/@creator/video/..."></textarea>
+          <button type="button" id="btn-batch-ingest" class="btn btn-primary">Ingest Batch</button>
+          <pre id="batch-ingest-out" class="code-block hidden"></pre>
+        </div>
+
+        <div class="card stack">
+          <div class="row-between">
+            <h2>Catalog Entries → Batch Drafts</h2>
+            <button type="button" id="btn-load-entries" class="btn btn-sm">Reload Entries</button>
+          </div>
+          <p class="muted">Select catalog entries below to generate Instagram drafts in bulk using the shared Go publishing service.</p>
+          <div id="catalog-batch-list" class="item-list"></div>
+          <button type="button" id="btn-batch-drafts" class="btn btn-primary">Create Drafts for Selected</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 3: Publication History -->
+    <section id="panel-history" class="panel hidden">
+      <div class="card">
+        <h2>Publication &amp; Handoff History</h2>
+        <div id="history-list" class="item-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/desktop.js"></script>
+</body>
+</html>

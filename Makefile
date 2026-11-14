@@ -1,10 +1,15 @@
-.PHONY: build run worker test migrate clean
+.PHONY: build build-desktop run worker test migrate clean
 
 BINARY := bin/vueltario
+DESKTOP_BINARY := bin/vueltario-desktop
 
 build:
 	@mkdir -p bin
 	go build -o $(BINARY) ./cmd/vueltario
+
+build-desktop:
+	@mkdir -p bin
+	go build -o $(DESKTOP_BINARY) ./cmd/vueltario-desktop
 
 run: build
 	./$(BINARY) serve --with-worker

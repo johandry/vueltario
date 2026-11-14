@@ -1,0 +1,16 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "VueltarioStudio",
+  "outputfilename": "vueltario-desktop",
+  "wailsjsdir": "./desktop/js",
+  "version": "2",
+  "author": {
+    "name": "Cuban Social / Vueltario"
+  },
+  "info": {
+    "companyName": "Cuban Social",
+    "productName": "Vueltario Studio",
+    "productVersion": "1.0.0",
+    "comments": "Vueltario Desktop Publishing Studio for @cubansocial.sd"
+  }
+}

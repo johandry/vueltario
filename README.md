@@ -2,12 +2,13 @@
 
 Vueltario is a personal and community catalog of Cuban dance moves (*vueltas*) across **casino**, **Timba**, and **rueda de casino**, paired with an administrator workflow for rights-cleared Instagram publishing to `@cubansocial.sd`.
 
-Built from [docs/Vueltario-PRD.md](./docs/Vueltario-PRD.md) (Phases 0–3 + invited-contributor community moderation):
+Built from [docs/Vueltario-PRD.md](./docs/Vueltario-PRD.md) (Phases 0–5 across web, CLI, community sync, and Wails desktop, with native SwiftUI iOS in sibling repo `VueltariOS`):
 
 - **Go modular monolith & durable job worker** (`cmd/vueltario`, `internal/*`)
 - **Dual-driver persistence**: **PostgreSQL** (`migrations/postgres/`) for shared/production deployments + **SQLite** (`migrations/sqlite/`) for zero-config local execution and deterministic tests
 - **Same-origin responsive Vanilla JS website** (`web/`) — zero heavy frontend frameworks, WCAG 2.2 AA accessible controls, English UI with Spanish-ready `i18n.js` hooks, official YouTube/TikTok `postMessage` player bridges, conditional Meta embeds with honest fallbacks, and keyboard timing shortcuts (`[`, `]`, `P`)
 - **Unified Go CLI** (`vueltario serve | worker | migrate | capabilities | ingest | catalog | media | publish`)
+- **Wails v2 Desktop Studio** (`cmd/vueltario-desktop`, `internal/desktop`, `desktop/`, `wails.json`) — invokes the exact same Go publishing core as the CLI (`DESK-01`), authenticates via RFC 7636 S256 PKCE stored in the OS Keychain (`go-keyring`), and provides queue management, draft editing, rights checklist, destination confirmation, batch workflows, and publication history
 
 ---
 
@@ -19,6 +20,9 @@ make build
 
 # Run API + Web UI + background enrichment worker on http://localhost:8080
 ./bin/vueltario serve --with-worker
+
+# Build Wails v2 Desktop Publishing Studio
+make build-desktop
 ```
 
 Default local bootstrap administrator credentials (configurable via `.env` / environment variables):
