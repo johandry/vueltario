@@ -3,6 +3,8 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
@@ -428,6 +430,141 @@ func TestCrossUserIsolationCSRFMediaAndSuggestionProtection(t *testing.T) {
 	}
 	if !recovered {
 		t.Fatalf("healthy worker did not recover crashed worker's expired lease")
+	}
+}
+
+func TestPKCEAuthAndOfflineSyncIdempotencyConflictsAndTombstones(t *testing.T) {
+	env := newTestEnv(t)
+
+	// 1. Native OIDC PKCE (S256) flow
+	verifier := "vueltario-pkce-verifier-0123456789abcdef0123456789"
+	sum := sha256.Sum256([]byte(verifier))
+	challenge := base64.RawURLEncoding.EncodeToString(sum[:])
+
+	authResp, authBody := doBearerJSON(t, http.MethodPost, env.srv.URL+"/api/v1/auth/pkce/authorize", "", map[string]any{
+		"email":                 env.cfg.AdminEmail,
+		"password":              env.cfg.AdminPassword,
+		"client_id":             "vueltarios-ios",
+		"redirect_uri":          "vueltario://auth/callback",
+		"code_challenge":        challenge,
+		"code_challenge_method": "S256",
+		"state":                 "xyz-state",
+	}, nil)
+	if authResp.StatusCode != http.StatusOK || authBody["code"] == nil {
+		t.Fatalf("pkce authorize failed: %d %v", authResp.StatusCode, authBody)
+	}
+	code := authBody["code"].(string)
+
+	// Wrong verifier must fail with 401
+	badTokResp, _ := doBearerJSON(t, http.MethodPost, env.srv.URL+"/api/v1/auth/pkce/token", "", map[string]any{
+		"grant_type":    "authorization_code",
+		"code":          code,
+		"client_id":     "vueltarios-ios",
+		"redirect_uri":  "vueltario://auth/callback",
+		"code_verifier": "wrong-verifier-value-that-is-at-least-43-characters-long",
+	}, nil)
+	if badTokResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for wrong PKCE verifier, got %d", badTokResp.StatusCode)
+	}
+
+	// Valid verifier succeeds once, replay fails!
+	tokResp, tokBody := doBearerJSON(t, http.MethodPost, env.srv.URL+"/api/v1/auth/pkce/token", "", map[string]any{
+		"grant_type":    "authorization_code",
+		"code":          code,
+		"client_id":     "vueltarios-ios",
+		"redirect_uri":  "vueltario://auth/callback",
+		"code_verifier": verifier,
+	}, nil)
+	if tokResp.StatusCode != http.StatusOK || tokBody["access_token"] == nil {
+		t.Fatalf("pkce token exchange failed: %d %v", tokResp.StatusCode, tokBody)
+	}
+	pkceToken := tokBody["access_token"].(string)
+
+	replayResp, _ := doBearerJSON(t, http.MethodPost, env.srv.URL+"/api/v1/auth/pkce/token", "", map[string]any{
+		"grant_type":    "authorization_code",
+		"code":          code,
+		"client_id":     "vueltarios-ios",
+		"redirect_uri":  "vueltario://auth/callback",
+		"code_verifier": verifier,
+	}, nil)
+	if replayResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 on PKCE code replay, got %d", replayResp.StatusCode)
+	}
+
+	// 2. Offline Sync Push: save_link + replay idempotency + base_revision conflict + tombstone delete
+	syncResp1, syncBody1 := doBearerJSON(t, http.MethodPost, env.srv.URL+"/api/v1/sync", pkceToken, map[string]any{
+		"cursor": 0,
+		"mutations": []map[string]any{
+			{
+				"client_mutation_id": "ios-mut-001",
+				"operation":          "save_link",
+				"url":                "https://www.tiktok.com/@cubansalsa/video/7400000000000000001",
+				"private_notes":      "Saved offline from iPhone Share Extension",
+			},
+		},
+	}, nil)
+	if syncResp1.StatusCode != http.StatusOK {
+		t.Fatalf("sync push failed: %d %v", syncResp1.StatusCode, syncBody1)
+	}
+	outcomes1 := syncBody1["outcomes"].([]any)
+	firstOutcome := outcomes1[0].(map[string]any)
+	if firstOutcome["status"] != "applied" {
+		t.Fatalf("expected applied, got %v", firstOutcome)
+	}
+	entryID := firstOutcome["entry"].(map[string]any)["id"].(string)
+
+	// Reconnect retry with same client_mutation_id -> duplicate_noop (synced exactly once!)
+	_, syncBody2 := doBearerJSON(t, http.MethodPost, env.srv.URL+"/api/v1/sync", pkceToken, map[string]any{
+		"cursor": 0,
+		"mutations": []map[string]any{
+			{
+				"client_mutation_id": "ios-mut-001",
+				"operation":          "save_link",
+				"url":                "https://www.tiktok.com/@cubansalsa/video/7400000000000000001",
+			},
+		},
+	}, nil)
+	if syncBody2["outcomes"].([]any)[0].(map[string]any)["status"] != "duplicate_noop" {
+		t.Fatalf("expected duplicate_noop on reconnect retry, got %v", syncBody2)
+	}
+
+	// Bump revision on server to v2, then send stale offline update with base_revision=1 -> returns conflict with server_current!
+	doBearerJSON(t, http.MethodPatch, env.srv.URL+"/api/v1/entries/"+entryID, pkceToken, map[string]any{
+		"revision":      1,
+		"private_notes": "Updated on web to v2",
+	}, nil)
+
+	_, conflictSync := doBearerJSON(t, http.MethodPost, env.srv.URL+"/api/v1/sync", pkceToken, map[string]any{
+		"cursor": 0,
+		"mutations": []map[string]any{
+			{
+				"client_mutation_id": "ios-mut-002",
+				"operation":          "update_entry",
+				"entry_id":           entryID,
+				"base_revision":      1,
+				"private_notes":      "Stale offline note",
+			},
+		},
+	}, nil)
+	confOut := conflictSync["outcomes"].([]any)[0].(map[string]any)
+	if confOut["status"] != "conflict" || confOut["server_current"] == nil {
+		t.Fatalf("expected conflict with server_current so offline edits are never silently dropped, got %v", confOut)
+	}
+
+	// Delete with current base_revision=2 emits tombstone event
+	_, delSync := doBearerJSON(t, http.MethodPost, env.srv.URL+"/api/v1/sync", pkceToken, map[string]any{
+		"cursor": 0,
+		"mutations": []map[string]any{
+			{
+				"client_mutation_id": "ios-mut-003",
+				"operation":          "delete_entry",
+				"entry_id":           entryID,
+				"base_revision":      2,
+			},
+		},
+	}, nil)
+	if delSync["outcomes"].([]any)[0].(map[string]any)["status"] != "applied" {
+		t.Fatalf("expected tombstone delete applied, got %v", delSync)
 	}
 }
 

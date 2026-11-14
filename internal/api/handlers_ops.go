@@ -662,6 +662,59 @@ func (s *Server) handleReconcilePublication(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, job)
 }
 
+// handleBatchCreatePublications implements Phase 5 isolated batch draft creation without aborting on per-item errors.
+func (s *Server) handleBatchCreatePublications(w http.ResponseWriter, r *http.Request) {
+	sess := currentSession(r)
+	var req struct {
+		Items []struct {
+			PrivateEntryID       *string `json:"private_entry_id"`
+			PublicRevisionID     *string `json:"public_revision_id"`
+			AssetID              *string `json:"asset_id"`
+			DestinationAccount   string  `json:"destination_account"`
+			BrandPrefix          string  `json:"brand_prefix"`
+			IncludeCompanionTags bool    `json:"include_companion_tags"`
+		} `json:"items"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json", "Invalid batch publication payload")
+		return
+	}
+	if len(req.Items) == 0 || len(req.Items) > 50 {
+		writeError(w, http.StatusBadRequest, "validation_error", "Batch must contain between 1 and 50 items")
+		return
+	}
+	type itemRes struct {
+		Index       int                    `json:"index"`
+		Status      string                 `json:"status"`
+		Publication *domain.PublicationJob `json:"publication,omitempty"`
+		Error       string                 `json:"error,omitempty"`
+	}
+	results := make([]itemRes, 0, len(req.Items))
+	var okCount, failCount int
+	for idx, it := range req.Items {
+		pub, err := s.pubSvc.CreateDraft(r.Context(), publishing.DraftRequest{
+			AdminUser:            sess.User,
+			PublicRevisionID:     it.PublicRevisionID,
+			PrivateEntryID:       it.PrivateEntryID,
+			AssetID:              it.AssetID,
+			DestinationAccount:   it.DestinationAccount,
+			BrandPrefix:          it.BrandPrefix,
+			IncludeCompanionTags: it.IncludeCompanionTags,
+		})
+		if err != nil {
+			failCount++
+			results = append(results, itemRes{Index: idx, Status: "failed", Error: err.Error()})
+			continue
+		}
+		okCount++
+		results = append(results, itemRes{Index: idx, Status: "created", Publication: pub})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"summary": map[string]int{"total": len(req.Items), "created": okCount, "failed": failCount},
+		"items":   results,
+	})
+}
+
 // --- Sync, Portability & Backup ---
 
 func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
@@ -674,6 +727,37 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
+		"events":      events,
+		"next_cursor": nextCursor,
+	})
+}
+
+func (s *Server) handleSyncPush(w http.ResponseWriter, r *http.Request) {
+	sess := currentSession(r)
+	var req struct {
+		Cursor    int64             `json:"cursor"`
+		Mutations []db.SyncMutation `json:"mutations"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json", "Invalid sync push payload")
+		return
+	}
+	if len(req.Mutations) > 200 {
+		writeError(w, http.StatusBadRequest, "validation_error", "Sync mutation batch exceeds 200 items")
+		return
+	}
+	outcomes, err := s.store.ApplySyncMutations(r.Context(), sess.User.ID, req.Mutations)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	events, nextCursor, err := s.store.GetPersonalSyncDeltas(r.Context(), sess.User.ID, req.Cursor, 200)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"outcomes":    outcomes,
 		"events":      events,
 		"next_cursor": nextCursor,
 	})

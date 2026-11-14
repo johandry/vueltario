@@ -82,6 +82,82 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, sess)
 }
 
+func (s *Server) handlePKCEAuthorize(w http.ResponseWriter, r *http.Request) {
+	if !s.limiter.Allow("pkce_auth:" + clientIP(r)) {
+		w.Header().Set("Retry-After", "60")
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "Too many authorization attempts")
+		return
+	}
+	var req struct {
+		Email               string `json:"email"`
+		Password            string `json:"password"`
+		ClientID            string `json:"client_id"`
+		RedirectURI         string `json:"redirect_uri"`
+		CodeChallenge       string `json:"code_challenge"`
+		CodeChallengeMethod string `json:"code_challenge_method"`
+		State               string `json:"state"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json", "Invalid PKCE authorize payload")
+		return
+	}
+	code, err := s.store.CreatePKCEAuthorizationCode(r.Context(), db.PKCEAuthorizeInput{
+		Email:               req.Email,
+		Password:            req.Password,
+		ClientID:            req.ClientID,
+		RedirectURI:         req.RedirectURI,
+		CodeChallenge:       req.CodeChallenge,
+		CodeChallengeMethod: req.CodeChallengeMethod,
+	})
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"code":  code,
+		"state": req.State,
+	})
+}
+
+func (s *Server) handlePKCEToken(w http.ResponseWriter, r *http.Request) {
+	if !s.limiter.Allow("pkce_tok:" + clientIP(r)) {
+		w.Header().Set("Retry-After", "60")
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "Too many token attempts")
+		return
+	}
+	var req struct {
+		GrantType    string `json:"grant_type"`
+		Code         string `json:"code"`
+		ClientID     string `json:"client_id"`
+		RedirectURI  string `json:"redirect_uri"`
+		CodeVerifier string `json:"code_verifier"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_json", "Invalid PKCE token payload")
+		return
+	}
+	if req.GrantType != "" && req.GrantType != "authorization_code" {
+		writeError(w, http.StatusBadRequest, "unsupported_grant_type", "Expected authorization_code")
+		return
+	}
+	sess, err := s.store.ExchangePKCECode(r.Context(), db.PKCETokenExchangeInput{
+		Code:         req.Code,
+		ClientID:     req.ClientID,
+		RedirectURI:  req.RedirectURI,
+		CodeVerifier: req.CodeVerifier,
+	}, 30*24*time.Hour)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"access_token": sess.PlainToken,
+		"token_type":   "Bearer",
+		"expires_at":   sess.ExpiresAt,
+		"user":         sess.User,
+	})
+}
+
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(SessionCookieName); err == nil && c.Value != "" {
 		_ = s.store.DeleteSessionByToken(r.Context(), c.Value)

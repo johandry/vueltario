@@ -6,8 +6,10 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -100,25 +102,51 @@ func (s *Store) RawDB() *sql.DB {
 }
 
 func (s *Store) MigrateUp(ctx context.Context) error {
-	path := fmt.Sprintf("migrations/%s/0001_initial.up.sql", s.dialect)
-	raw, err := migrationsFS.ReadFile(path)
+	dir := fmt.Sprintf("migrations/%s", s.dialect)
+	entries, err := fs.ReadDir(migrationsFS, dir)
 	if err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx, string(raw)); err != nil {
-		return fmt.Errorf("migrate up (%s): %w", s.dialect, err)
+	var ups []string
+	for _, ent := range entries {
+		if !ent.IsDir() && strings.HasSuffix(ent.Name(), ".up.sql") {
+			ups = append(ups, ent.Name())
+		}
+	}
+	sort.Strings(ups)
+	for _, name := range ups {
+		raw, err := migrationsFS.ReadFile(dir + "/" + name)
+		if err != nil {
+			return err
+		}
+		if _, err := s.db.ExecContext(ctx, string(raw)); err != nil {
+			return fmt.Errorf("migrate up (%s/%s): %w", s.dialect, name, err)
+		}
 	}
 	return nil
 }
 
 func (s *Store) MigrateDown(ctx context.Context) error {
-	path := fmt.Sprintf("migrations/%s/0001_initial.down.sql", s.dialect)
-	raw, err := migrationsFS.ReadFile(path)
+	dir := fmt.Sprintf("migrations/%s", s.dialect)
+	entries, err := fs.ReadDir(migrationsFS, dir)
 	if err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx, string(raw)); err != nil {
-		return fmt.Errorf("migrate down (%s): %w", s.dialect, err)
+	var downs []string
+	for _, ent := range entries {
+		if !ent.IsDir() && strings.HasSuffix(ent.Name(), ".down.sql") {
+			downs = append(downs, ent.Name())
+		}
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(downs)))
+	for _, name := range downs {
+		raw, err := migrationsFS.ReadFile(dir + "/" + name)
+		if err != nil {
+			return err
+		}
+		if _, err := s.db.ExecContext(ctx, string(raw)); err != nil {
+			return fmt.Errorf("migrate down (%s/%s): %w", s.dialect, name, err)
+		}
 	}
 	return nil
 }

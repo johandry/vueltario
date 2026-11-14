@@ -82,8 +82,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/health", s.handleHealth)
 	s.mux.HandleFunc("GET /api/v1/capabilities", s.handleCapabilities)
 
-	// Authentication & Account Management
+	// Authentication & Account Management (Web Cookies + Native OIDC PKCE)
 	s.mux.HandleFunc("POST /api/v1/auth/login", s.handleLogin)
+	s.mux.HandleFunc("POST /api/v1/auth/pkce/authorize", s.handlePKCEAuthorize)
+	s.mux.HandleFunc("POST /api/v1/auth/pkce/token", s.handlePKCEToken)
 	s.mux.HandleFunc("POST /api/v1/auth/logout", s.requireMutatingAuth(s.handleLogout))
 	s.mux.HandleFunc("POST /api/v1/auth/register", s.handleRegister)
 	s.mux.HandleFunc("GET /api/v1/auth/me", s.handleMe)
@@ -146,9 +148,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/v1/admin/publications/{id}/approve", s.requireAdminMutating(s.handleApprovePublication))
 	s.mux.HandleFunc("POST /api/v1/admin/publications/{id}/execute", s.requireAdminMutating(s.handleExecutePublication))
 	s.mux.HandleFunc("POST /api/v1/admin/publications/{id}/reconcile", s.requireAdminMutating(s.handleReconcilePublication))
+	s.mux.HandleFunc("POST /api/v1/admin/publications/batch-draft", s.requireAdminMutating(s.handleBatchCreatePublications))
 
 	// Sync, Portability Export & Backup/Restore
 	s.mux.HandleFunc("GET /api/v1/sync", s.requireAuth(s.handleSync))
+	s.mux.HandleFunc("POST /api/v1/sync", s.requireMutatingAuth(s.handleSyncPush))
 	s.mux.HandleFunc("GET /api/v1/export", s.requireAuth(s.handleExportPersonal))
 	s.mux.HandleFunc("GET /api/v1/admin/backup", s.requireAdmin(s.handleAdminBackup))
 	s.mux.HandleFunc("POST /api/v1/admin/restore", s.requireAdminMutating(s.handleAdminRestore))
