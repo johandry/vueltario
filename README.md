@@ -1,6 +1,10 @@
 # Vueltario — Architecture & Setup Guide
 
-Vueltario is a curated catalog of Cuban dance moves (*vueltas*) across **casino**, **Timba**, and **rueda de casino**, with rights-cleared Instagram publishing to `@cubansocial.sd`.
+Vueltario is a curated catalog of Cuban dance moves (*vueltas*) across **casino**, **Timba**, and **rueda de casino**, with rights-cleared Instagram publishing to [`@cubansocial.sd`](https://www.instagram.com/cubansocial.sd/).
+
+- **Live GitHub Pages Website:** [https://www.johandry.com/vueltario/](https://www.johandry.com/vueltario/) *(planned custom domain: [https://vueltario.com](https://vueltario.com))*
+- **Direct Admin Studio:** `https://www.johandry.com/vueltario/admin/` *(planned custom domain: `https://vueltario.com/admin/`)*
+- **GitHub Repositories:** [`johandry/vueltario`](https://github.com/johandry/vueltario) (Web, CLI, Wails Desktop) · [`johandry/VueltariOS`](https://github.com/johandry/VueltariOS) (Native SwiftUI iOS + Share Extension)
 
 ## Serverless & Multi-Client Architecture
 
@@ -44,8 +48,8 @@ VALUES ('<YOUR-AUTH-USER-UUID>', 'you@example.com', 'Johandry');
 
 ## 2. Static Website on GitHub Pages (`site/`)
 
-- **Landing page (`/` → [`site/index.html`](./site/index.html)):** Strictly **render-only**. Visitors search canonical Spanish move names or regional aliases, filter by platform/style, watch embedded YouTube/TikTok/Facebook/Instagram players or hosted R2/Supabase videos, jump to timed move segments, and follow original creators. There is **no** Sign In button and **no** link to `/admin`.
-- **Hidden Admin Studio (`.../admin` → [`site/admin/index.html`](./site/admin/index.html)):** Navigate directly to `https://vueltario.com/admin` (or `http://localhost:8000/admin` locally). Prompts for Supabase Auth credentials, verifies membership in `public.admin_users`, and unlocks:
+- **Landing page (`/` → [`site/index.html`](./site/index.html)):** Live at [https://www.johandry.com/vueltario/](https://www.johandry.com/vueltario/) *(and [https://vueltario.com](https://vueltario.com) once DNS is connected)*. Strictly **render-only**: visitors search canonical Spanish move names or regional aliases, filter by platform/style, watch embedded YouTube/TikTok/Facebook/Instagram players or hosted R2/Supabase videos, jump to timed move segments, and follow original creators. There is **no** Sign In button and **no** link to `/admin`.
+- **Hidden Admin Studio (`.../admin` → [`site/admin/index.html`](./site/admin/index.html)):** Navigate directly to `https://www.johandry.com/vueltario/admin/` *(or `https://vueltario.com/admin` / `http://localhost:8000/admin/` locally)*. Prompts immediately for Supabase Auth email + password, verifies membership in `public.admin_users`, and unlocks:
   - Saving & deduplicating YouTube, TikTok, Facebook, and Instagram URLs (plus automatic YouTube/TikTok oEmbed metadata lookup and batch URL import)
   - Live player **Mark Start `[`** / **Mark End `]`** / **Preview `P`** and manual `MM:SS.mmm` timing
   - Inline editing & deletion of move occurrences, segment notes, public comments, private admin notes, creator attribution, and video/music rights records

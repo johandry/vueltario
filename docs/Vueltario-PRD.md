@@ -2,7 +2,7 @@
 
 **Version:** 1.0 · **Date:** November 14, 2026  
 **Status:** Implementation-planning draft; assumptions and external integration gates are explicit.  
-**Product:** Vueltario · **Website:** https://vueltario.com  
+**Product:** Vueltario · **Website:** https://vueltario.com *(currently hosted at https://www.johandry.com/vueltario/)*  
 **Instagram destination:** [@cubansocial.sd](https://www.instagram.com/cubansocial.sd/)  
 **Platforms:** responsive web, Go CLI, Go + Wails desktop, native SwiftUI iOS.
 

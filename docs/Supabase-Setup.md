@@ -80,11 +80,13 @@ This step-by-step guide walks through creating and configuring the **Vueltario**
 Because Vueltario's landing page has no public user accounts and only you (`johandry`) sign in at `.../admin`:
 
 1. In the left sidebar, go to **Authentication** → **URL Configuration**:
-   - **Site URL:** `https://vueltario.com` *(or `https://johandry.github.io/Vueltario` until your custom domain DNS is pointed)*
+   - **Site URL:** `https://www.johandry.com/vueltario/` *(switch to `https://vueltario.com` once custom domain DNS is pointed)*
    - **Redirect URLs:** Click **Add URL** and add:
+     - `https://www.johandry.com/vueltario/admin`
+     - `https://www.johandry.com/vueltario/admin/`
      - `https://vueltario.com/admin`
      - `https://vueltario.com/admin/`
-     - `https://johandry.github.io/Vueltario/admin/`
+     - `https://johandry.github.io/vueltario/admin/`
      - `http://localhost:8000/admin/` *(for local `make preview-site` testing)*
    - Click **Save changes**.
 
@@ -147,10 +149,10 @@ Row-Level Security in Vueltario checks `public.is_vueltario_admin()`, which only
 
 ### 7.1 GitHub Repository Variables (For Static Website & Keepalive Action)
 
-Once you push `johandry/Vueltario` to GitHub:
+Once you push `johandry/vueltario` to GitHub:
 
-1. Open `https://github.com/johandry/Vueltario/settings/pages` and set **Build and deployment → Source** to **GitHub Actions**.
-2. Open `https://github.com/johandry/Vueltario/settings/secrets/actions` → switch to the **Variables** tab → click **New repository variable**:
+1. Open `https://github.com/johandry/vueltario/settings/pages` and set **Build and deployment → Source** to **GitHub Actions**.
+2. Open `https://github.com/johandry/vueltario/settings/secrets/actions` → switch to the **Variables** tab → click **New repository variable**:
    - Name: `VUELTARIO_SUPABASE_URL`
      Value: `https://<PROJECT_REF>.supabase.co`
    - Name: `VUELTARIO_SUPABASE_ANON_KEY`
