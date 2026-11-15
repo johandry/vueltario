@@ -185,6 +185,7 @@ function renderEntryList() {
 }
 
 function selectEntry(entry) {
+  if (state.selectedEntry?.id === entry?.id) return;
   state.selectedEntry = entry;
   renderEntryList();
   renderSelectedDetail();

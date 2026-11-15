@@ -548,9 +548,9 @@ func (a *FacebookAdapter) BuildEmbedDescriptor(src domain.Source) PlaybackDescri
 		return desc
 	}
 	desc.Mode = "iframe_embed"
-	fbWidth, fbHeight := 640, 360
+	fbWidth, fbHeight := 560, 315
 	if strings.Contains(src.CanonicalURL, "/reel/") || strings.Contains(src.OriginalURL, "/reel/") {
-		fbWidth, fbHeight = 360, 640
+		fbWidth, fbHeight = 267, 476
 	}
 	desc.EmbedURL = fmt.Sprintf("https://www.facebook.com/plugins/video.php?href=%s&show_text=false&width=%d&height=%d",
 		url.QueryEscape(src.CanonicalURL), fbWidth, fbHeight)

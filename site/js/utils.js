@@ -370,8 +370,10 @@ export function buildPlaybackDescriptor(entry) {
 
   if (entry.platform === 'facebook') {
     const isReel = Boolean(entry.canonical_url?.includes('/reel/') || entry.original_url?.includes('/reel/'));
-    const fbWidth = isReel ? 360 : 640;
-    const fbHeight = isReel ? 640 : 360;
+    // Facebook's official Reel embed dimension is 267x476 (9:16) so 100% of the iframe stays inside the initial viewport;
+    // if the bottom of a Facebook iframe extends below window.innerHeight, Facebook's click-jacking guard blocks the first Play click.
+    const fbWidth = isReel ? 267 : 560;
+    const fbHeight = isReel ? 476 : 315;
     return {
       entryId: entry.id,
       platform: 'facebook',
@@ -383,8 +385,7 @@ export function buildPlaybackDescriptor(entry) {
       allowedOrigins: ['https://www.facebook.com'],
       supportsPlayerTime: false,
       supportsSeek: false,
-      precisionNote:
-        'Facebook Embedded Video Player (Note: Safari ITP / browser tracking protection or being logged out of Facebook may pause embedded Reels after a short preview; use Open Original if playback stops).',
+      precisionNote: 'Facebook Embedded Video Player (timestamps shown below for reference).',
       openOriginalUrl: entry.original_url || entry.canonical_url,
     };
   }

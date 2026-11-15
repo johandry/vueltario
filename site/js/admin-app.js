@@ -314,6 +314,7 @@ function applyCatalogFilters() {
 }
 
 function selectAdminEntry(id) {
+  if (state.selectedEntry?.id === id) return;
   state.selectedEntry = state.entries.find((x) => x.id === id) || null;
   applyCatalogFilters();
   renderDetail(false);
