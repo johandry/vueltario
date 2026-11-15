@@ -62,17 +62,24 @@ export class PlayerBridge {
       typeof descriptor.embedUrl === 'string' &&
       ALLOWED_EMBED_PREFIXES.some((p) => descriptor.embedUrl.startsWith(p))
     ) {
+      const isPortrait = descriptor.orientation === 'portrait';
+      this.containerEl.classList.toggle('player-stage-portrait', isPortrait);
+
       const iframe = document.createElement('iframe');
       let src = descriptor.embedUrl;
       if (descriptor.platform === 'youtube') {
         src += `&origin=${encodeURIComponent(window.location.origin)}`;
       }
       iframe.src = src;
-      iframe.className = 'player-iframe';
+      iframe.className = isPortrait ? 'player-iframe player-iframe-portrait' : 'player-iframe player-iframe-landscape';
+      if (descriptor.embedWidth) iframe.width = String(descriptor.embedWidth);
+      if (descriptor.embedHeight) iframe.height = String(descriptor.embedHeight);
+      iframe.scrolling = 'no';
+      iframe.allowFullscreen = true;
       iframe.title = `${descriptor.platform} dance video player`;
-      iframe.loading = 'lazy';
+      iframe.loading = 'eager';
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-      iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      iframe.allow = 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen';
       iframe.addEventListener('load', () => {
         if (descriptor.platform === 'youtube' && iframe.contentWindow) {
           iframe.contentWindow.postMessage(

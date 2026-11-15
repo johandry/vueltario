@@ -338,10 +338,12 @@ export function buildPlaybackDescriptor(entry) {
   }
 
   if (entry.platform === 'youtube' && entry.platform_content_id) {
+    const isShorts = Boolean(entry.canonical_url?.includes('/shorts/') || entry.original_url?.includes('/shorts/'));
     return {
       entryId: entry.id,
       platform: 'youtube',
       mode: 'iframe_embed',
+      orientation: isShorts ? 'portrait' : 'landscape',
       embedUrl: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(entry.platform_content_id)}?enablejsapi=1&rel=0&playsinline=1`,
       allowedOrigins: ['https://www.youtube-nocookie.com', 'https://www.youtube.com'],
       supportsPlayerTime: true,
@@ -356,6 +358,7 @@ export function buildPlaybackDescriptor(entry) {
       entryId: entry.id,
       platform: 'tiktok',
       mode: 'iframe_embed',
+      orientation: 'portrait',
       embedUrl: `https://www.tiktok.com/player/v1/${encodeURIComponent(entry.platform_content_id)}?music_info=1&description=1`,
       allowedOrigins: ['https://www.tiktok.com'],
       supportsPlayerTime: true,
@@ -366,15 +369,22 @@ export function buildPlaybackDescriptor(entry) {
   }
 
   if (entry.platform === 'facebook') {
+    const isReel = Boolean(entry.canonical_url?.includes('/reel/') || entry.original_url?.includes('/reel/'));
+    const fbWidth = isReel ? 360 : 640;
+    const fbHeight = isReel ? 640 : 360;
     return {
       entryId: entry.id,
       platform: 'facebook',
       mode: 'iframe_embed',
-      embedUrl: `https://www.facebook.com/plugins/video.php?show_text=false&href=${encodeURIComponent(entry.canonical_url)}`,
+      orientation: isReel ? 'portrait' : 'landscape',
+      embedWidth: fbWidth,
+      embedHeight: fbHeight,
+      embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(entry.canonical_url)}&show_text=false&width=${fbWidth}&height=${fbHeight}`,
       allowedOrigins: ['https://www.facebook.com'],
       supportsPlayerTime: false,
       supportsSeek: false,
-      precisionNote: 'Facebook public video player (programmatic seek unverified; timestamps shown for reference).',
+      precisionNote:
+        'Facebook Embedded Video Player (Note: Safari ITP / browser tracking protection or being logged out of Facebook may pause embedded Reels after a short preview; use Open Original if playback stops).',
       openOriginalUrl: entry.original_url || entry.canonical_url,
     };
   }
@@ -385,6 +395,7 @@ export function buildPlaybackDescriptor(entry) {
       entryId: entry.id,
       platform: 'instagram',
       mode: 'iframe_embed',
+      orientation: 'portrait',
       embedUrl: `https://www.instagram.com/${kind}/${encodeURIComponent(entry.platform_content_id)}/embed/`,
       allowedOrigins: ['https://www.instagram.com'],
       supportsPlayerTime: false,

@@ -548,7 +548,12 @@ func (a *FacebookAdapter) BuildEmbedDescriptor(src domain.Source) PlaybackDescri
 		return desc
 	}
 	desc.Mode = "iframe_embed"
-	desc.EmbedURL = "https://www.facebook.com/plugins/video.php?show_text=false&href=" + url.QueryEscape(src.CanonicalURL)
+	fbWidth, fbHeight := 640, 360
+	if strings.Contains(src.CanonicalURL, "/reel/") || strings.Contains(src.OriginalURL, "/reel/") {
+		fbWidth, fbHeight = 360, 640
+	}
+	desc.EmbedURL = fmt.Sprintf("https://www.facebook.com/plugins/video.php?href=%s&show_text=false&width=%d&height=%d",
+		url.QueryEscape(src.CanonicalURL), fbWidth, fbHeight)
 	desc.AllowedPostMessageOrigins = []string{"https://www.facebook.com"}
 	desc.SupportsPlayerTime = false // Honest capability: JS SDK timing unverified [S8]
 	desc.SupportsSeek = false

@@ -73,12 +73,19 @@ export class PlayerController {
         const sep = src.includes('?') ? '&' : '?';
         src = `${src}${sep}origin=${encodeURIComponent(window.location.origin)}`;
       }
+      const isPortrait =
+        descriptor.platform === 'tiktok' ||
+        descriptor.platform === 'instagram' ||
+        src.includes('height=640') ||
+        (descriptor.open_original_url || '').includes('/shorts/');
       iframe.src = src;
-      iframe.className = 'player-iframe';
+      iframe.className = isPortrait ? 'player-iframe player-iframe-portrait' : 'player-iframe';
+      iframe.scrolling = 'no';
+      iframe.allowFullscreen = true;
       iframe.title = `${descriptor.platform} embedded video player`;
-      iframe.loading = 'lazy';
+      iframe.loading = 'eager';
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-      iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      iframe.allow = 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen';
       iframe.addEventListener('load', () => {
         if (descriptor.platform === 'youtube' && iframe.contentWindow) {
           iframe.contentWindow.postMessage(
