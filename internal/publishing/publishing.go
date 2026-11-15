@@ -19,6 +19,7 @@ import (
 	"github.com/johandry/vueltario/internal/config"
 	"github.com/johandry/vueltario/internal/db"
 	"github.com/johandry/vueltario/internal/domain"
+	"github.com/johandry/vueltario/internal/storage"
 )
 
 var (
@@ -44,20 +45,44 @@ type Transport interface {
 }
 
 type Service struct {
-	cfg       config.Config
-	store     *db.Store
-	transport Transport
+	cfg        config.Config
+	store      *db.Store
+	transport  Transport
+	cloudStore storage.ObjectStore
 }
 
 func NewService(cfg config.Config, store *db.Store, transport Transport) *Service {
 	if transport == nil {
 		transport = NewGraphTransport(cfg)
 	}
-	return &Service{
-		cfg:       cfg,
-		store:     store,
-		transport: transport,
+	var cloud storage.ObjectStore
+	switch cfg.StorageProvider {
+	case "r2":
+		if r2, err := storage.NewR2Store(storage.R2Config{
+			AccountID:       cfg.R2AccountID,
+			Endpoint:        cfg.R2Endpoint,
+			Bucket:          cfg.R2Bucket,
+			AccessKeyID:     cfg.R2AccessKeyID,
+			SecretAccessKey: cfg.R2SecretAccessKey,
+			PublicBaseURL:   cfg.R2PublicBaseURL,
+		}); err == nil {
+			cloud = r2
+		}
+	case "supabase":
+		if sb, err := storage.NewSupabaseStorage(cfg.SupabaseURL, cfg.SupabaseServiceKey, cfg.SupabaseServiceKey, cfg.SupabaseBucket); err == nil {
+			cloud = sb
+		}
 	}
+	return &Service{
+		cfg:        cfg,
+		store:      store,
+		transport:  transport,
+		cloudStore: cloud,
+	}
+}
+
+func (s *Service) SetCloudStore(cs storage.ObjectStore) {
+	s.cloudStore = cs
 }
 
 type DraftRequest struct {
@@ -455,13 +480,25 @@ func (s *Service) Execute(ctx context.Context, opts ExecuteOptions) (*domain.Pub
 		return &clone, nil
 	}
 
-	// Stage short-lived external URL for Meta's fetch workflow
-	tok, err := generateStagingToken()
-	if err != nil {
-		return nil, err
+	// Stage short-lived external URL for Meta's fetch workflow:
+	// Prefer Cloudflare R2 ($0 egress SigV4 presigned URL) or Supabase Storage signed URL when serverless,
+	// falling back to BaseURL staging token in local/test mode.
+	var stagingURL string
+	if s.cloudStore != nil && (asset.StorageBackend == "r2" || asset.StorageBackend == "supabase") {
+		signedURL, signErr := s.cloudStore.PresignGetURL(ctx, asset.StorageKey, 2*time.Hour)
+		if signErr != nil {
+			return nil, fmt.Errorf("failed generating %s presigned staging URL: %w", s.cloudStore.ProviderName(), signErr)
+		}
+		stagingURL = signedURL
+	} else {
+		tok, tErr := generateStagingToken()
+		if tErr != nil {
+			return nil, tErr
+		}
+		pub.StagingToken = tok
+		stagingURL = fmt.Sprintf("%s/api/v1/staging/%s/media.mp4", s.cfg.BaseURL, tok)
 	}
 	exp := time.Now().UTC().Add(s.cfg.StagingTTL)
-	pub.StagingToken = tok
 	pub.StagingExpiresAt = &exp
 	if opts.IdempotencyKey != "" {
 		pub.ExecuteIdempotencyKey = opts.IdempotencyKey
@@ -472,7 +509,6 @@ func (s *Service) Execute(ctx context.Context, opts ExecuteOptions) (*domain.Pub
 	if err != nil {
 		return nil, err
 	}
-	stagingURL := fmt.Sprintf("%s/api/v1/staging/%s/media.mp4", s.cfg.BaseURL, tok)
 
 	// Step 1: Create container (unless already persisted from an earlier retryable container step)
 	if pub.RemoteContainerID == "" {

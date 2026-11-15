@@ -23,6 +23,7 @@ type Config struct {
 	SignupMode    string // "invited_moderated", "open_moderated", "admin_only"
 
 	StorageRoot            string
+	StorageProvider        string // "r2", "supabase", or "filesystem"
 	MaxUploadBytes         int64
 	MaxClipDurationMs      int64
 	MaxConcurrentTranscode int
@@ -30,6 +31,20 @@ type Config struct {
 	StagingTTL             time.Duration
 	AIIntermediateTTL      time.Duration
 	OrphanQuarantineTTL    time.Duration
+
+	// Remote Supabase (Postgres + Auth + optional Supabase Storage)
+	SupabaseURL        string
+	SupabaseAnonKey    string
+	SupabaseServiceKey string
+	SupabaseBucket     string
+
+	// Cloudflare R2 S3-Compatible Video Storage ($0 egress — recommended for video assets & IG URL-fetch staging)
+	R2AccountID       string
+	R2Endpoint        string
+	R2Bucket          string
+	R2AccessKeyID     string
+	R2SecretAccessKey string
+	R2PublicBaseURL   string
 
 	AnalysisEnabled          bool
 	AnalysisDailyBudget      int
@@ -73,6 +88,17 @@ func Load() Config {
 	baseURL := strings.TrimRight(envOr("VUELTARIO_BASE_URL", "http://localhost:8080"), "/")
 	cookieSecure := envBool("VUELTARIO_COOKIE_SECURE", strings.HasPrefix(baseURL, "https://"))
 
+	storageProvider := strings.ToLower(envOr("VUELTARIO_STORAGE_PROVIDER", ""))
+	if storageProvider == "" {
+		if os.Getenv("VUELTARIO_R2_ACCESS_KEY_ID") != "" {
+			storageProvider = "r2"
+		} else if os.Getenv("VUELTARIO_SUPABASE_URL") != "" && os.Getenv("VUELTARIO_SUPABASE_SERVICE_KEY") != "" {
+			storageProvider = "supabase"
+		} else {
+			storageProvider = "filesystem"
+		}
+	}
+
 	return Config{
 		Addr:                     envOr("VUELTARIO_ADDR", ":8080"),
 		BaseURL:                  baseURL,
@@ -83,13 +109,24 @@ func Load() Config {
 		AdminPassword:            envOr("VUELTARIO_ADMIN_PASSWORD", "vueltario-local-admin"),
 		SignupMode:               envOr("VUELTARIO_SIGNUP_MODE", "invited_moderated"),
 		StorageRoot:              envOr("VUELTARIO_STORAGE_ROOT", filepath.Join("data", "storage")),
-		MaxUploadBytes:           envInt64("VUELTARIO_MAX_UPLOAD_BYTES", 500*1024*1024),        // 500 MiB
-		MaxClipDurationMs:        envInt64("VUELTARIO_MAX_CLIP_DURATION_MS", 10*60*1000),      // 10 minutes
-		MaxConcurrentTranscode:   envInt("VUELTARIO_MAX_CONCURRENT_TRANSCODES", 2),            // 2 concurrent transcodes
-		AdminStorageQuotaBytes:   envInt64("VUELTARIO_ADMIN_STORAGE_QUOTA_BYTES", 10<<30),     // 10 GiB
-		StagingTTL:               24 * time.Hour,                                              // 24h post terminal job
-		AIIntermediateTTL:        7 * 24 * time.Hour,                                          // 7 days max
-		OrphanQuarantineTTL:      7 * 24 * time.Hour,                                          // 7 days quarantine
+		StorageProvider:          storageProvider,
+		MaxUploadBytes:           envInt64("VUELTARIO_MAX_UPLOAD_BYTES", 500*1024*1024),    // 500 MiB
+		MaxClipDurationMs:        envInt64("VUELTARIO_MAX_CLIP_DURATION_MS", 10*60*1000),  // 10 minutes
+		MaxConcurrentTranscode:   envInt("VUELTARIO_MAX_CONCURRENT_TRANSCODES", 2),        // 2 concurrent transcodes
+		AdminStorageQuotaBytes:   envInt64("VUELTARIO_ADMIN_STORAGE_QUOTA_BYTES", 10<<30), // 10 GiB
+		StagingTTL:               24 * time.Hour,                                          // 24h post terminal job
+		AIIntermediateTTL:        7 * 24 * time.Hour,                                      // 7 days max
+		OrphanQuarantineTTL:      7 * 24 * time.Hour,                                      // 7 days quarantine
+		SupabaseURL:              strings.TrimRight(os.Getenv("VUELTARIO_SUPABASE_URL"), "/"),
+		SupabaseAnonKey:          os.Getenv("VUELTARIO_SUPABASE_ANON_KEY"),
+		SupabaseServiceKey:       os.Getenv("VUELTARIO_SUPABASE_SERVICE_KEY"),
+		SupabaseBucket:           envOr("VUELTARIO_SUPABASE_BUCKET", "vueltario-media"),
+		R2AccountID:              os.Getenv("VUELTARIO_R2_ACCOUNT_ID"),
+		R2Endpoint:               os.Getenv("VUELTARIO_R2_ENDPOINT"),
+		R2Bucket:                 envOr("VUELTARIO_R2_BUCKET", "vueltario-media"),
+		R2AccessKeyID:            os.Getenv("VUELTARIO_R2_ACCESS_KEY_ID"),
+		R2SecretAccessKey:        os.Getenv("VUELTARIO_R2_SECRET_ACCESS_KEY"),
+		R2PublicBaseURL:          strings.TrimRight(os.Getenv("VUELTARIO_R2_PUBLIC_URL"), "/"),
 		AnalysisEnabled:          envBool("VUELTARIO_ANALYSIS_ENABLED", true),
 		AnalysisDailyBudget:      envInt("VUELTARIO_ANALYSIS_DAILY_BUDGET", 200),
 		AnalysisHighConfVerified: envBool("VUELTARIO_ANALYSIS_HIGH_CONF_VERIFIED", false),

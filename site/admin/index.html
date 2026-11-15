@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vueltario — Administrator Studio</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https: blob:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://www.youtube.com https://www.tiktok.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.tiktok.com https://www.facebook.com https://www.instagram.com; object-src 'none'; base-uri 'self';">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <a href="#admin-main" class="skip-link">Skip to admin workspace</a>
+
+  <header class="site-header">
+    <div class="brand-block">
+      <h1 class="site-title"><a href="../">Vueltario</a> · Admin</h1>
+      <span class="site-subtitle">Remote Supabase Catalog &amp; Taxonomy Management</span>
+    </div>
+
+    <nav class="main-nav hidden" id="admin-nav" aria-label="Admin sections">
+      <button type="button" class="nav-tab active" data-section="catalog">Catalog &amp; Timing</button>
+      <button type="button" class="nav-tab" data-section="taxonomy">Moves &amp; Aliases</button>
+      <button type="button" class="nav-tab" data-section="backup">Export / Connection</button>
+    </nav>
+
+    <div class="inline-actions" style="margin-top:0">
+      <span id="admin-user-pill" class="badge hidden"></span>
+      <button type="button" id="btn-admin-signout" class="btn btn-secondary btn-sm hidden">Sign Out</button>
+    </div>
+  </header>
+
+  <div id="admin-toast" class="status-banner hidden" role="status" aria-live="polite"></div>
+
+  <main id="admin-main" class="main-container" tabindex="-1">
+    <!-- Supabase Connection Setup (shown only if SUPABASE_URL / ANON_KEY were not injected at build time) -->
+    <section id="supabase-setup-card" class="card login-gate-card hidden">
+      <h2>Connect Remote Supabase Project</h2>
+      <p class="helper-text">Enter your Supabase Project URL and public <code>anon</code> key. Row-Level Security protects all writes until you sign in as an administrator.</p>
+      <form id="form-supabase-config">
+        <label class="field-label" for="cfg-supabase-url">Supabase Project URL</label>
+        <input id="cfg-supabase-url" type="url" required placeholder="https://xyzcompany.supabase.co">
+        <label class="field-label" for="cfg-supabase-key">Supabase Public Anon Key</label>
+        <input id="cfg-supabase-key" required placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+        <div class="inline-actions" style="margin-top:0.9rem">
+          <button type="submit" class="btn btn-primary">Save Connection</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Authentication Gate -->
+    <section id="admin-login-gate" class="card login-gate-card hidden">
+      <h2>Administrator Sign In</h2>
+      <p class="helper-text">Authenticate with your Supabase administrator account to add, edit, time, or delete vuelta videos and moves.</p>
+      <form id="form-admin-login">
+        <label class="field-label" for="admin-email">Email</label>
+        <input id="admin-email" type="email" required autocomplete="username" placeholder="admin@vueltario.com">
+        <label class="field-label" for="admin-password">Password</label>
+        <input id="admin-password" type="password" required autocomplete="current-password">
+        <div class="inline-actions" style="margin-top:0.9rem">
+          <button type="submit" class="btn btn-primary">Sign In</button>
+          <button type="button" id="btn-reset-conn" class="btn btn-ghost btn-sm">Change Supabase URL</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Authenticated Admin Workspace -->
+    <div id="admin-workspace" class="hidden">
+      <!-- Section 1: Video Catalog CRUD, Player Timing & Occurrences -->
+      <section id="section-catalog">
+        <form id="form-ingest-link" class="card">
+          <label class="field-label" for="ingest-url-input">Add New Video Link (YouTube, TikTok, Facebook, Instagram)</label>
+          <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+            <input id="ingest-url-input" type="url" required style="flex:1 1 360px"
+              placeholder="https://www.youtube.com/watch?v=... or TikTok / Instagram / Facebook URL">
+            <button type="submit" class="btn btn-primary">Save Video Link</button>
+          </div>
+          <p id="ingest-helper" class="helper-text">Deduplicates automatically, strips tracking params, preserves playback offset, and fetches public oEmbed metadata where supported. (Instagram publishing runs via CLI, Wails Desktop, or VueltariOS.)</p>
+        </form>
+
+        <div class="card filter-bar">
+          <div class="filter-group grow">
+            <label for="adm-q" class="sr-only">Search catalog</label>
+            <input id="adm-q" type="search" placeholder="Filter by title, move, alias, creator, or URL…">
+          </div>
+          <div class="filter-group">
+            <select id="adm-platform" aria-label="Platform filter">
+              <option value="">All platforms</option>
+              <option value="youtube">YouTube</option>
+              <option value="tiktok">TikTok</option>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <select id="adm-vis" aria-label="Published status filter">
+              <option value="">Published &amp; Hidden</option>
+              <option value="published">Published on Landing Page</option>
+              <option value="hidden">Hidden / Draft</option>
+            </select>
+          </div>
+          <button type="button" id="btn-adm-reload" class="btn btn-secondary">Refresh</button>
+        </div>
+
+        <div class="catalog-split">
+          <div class="entry-list-pane">
+            <div id="adm-entry-list" class="entry-list"></div>
+          </div>
+
+          <div class="entry-detail-pane">
+            <div id="adm-empty-detail" class="card">
+              <p class="helper-text">Select a video on the left or paste a new URL above to edit metadata, mark start/end move times, update comments, or delete.</p>
+              <p class="helper-text">Shortcuts outside text fields: <kbd>[</kbd> Mark Start · <kbd>]</kbd> Mark End · <kbd>P</kbd> Preview Segment</p>
+            </div>
+            <div id="adm-detail-card" class="card hidden"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Taxonomy CRUD (Canonical Moves, Aliases & Ordered Combinations) -->
+      <section id="section-taxonomy" class="hidden">
+        <div class="taxonomy-layout">
+          <div class="card">
+            <h2>Move Taxonomy &amp; Aliases</h2>
+            <input id="tax-filter" type="search" placeholder="Filter moves or aliases…" style="margin-bottom:0.75rem">
+            <div id="tax-list"></div>
+          </div>
+
+          <div class="card">
+            <h3>Create Move or Ordered Combination</h3>
+            <form id="form-new-move">
+              <label class="field-label" for="nm-name">Canonical Spanish Name</label>
+              <input id="nm-name" required placeholder="e.g. Setenta con alarde">
+
+              <label class="field-label" for="nm-kind">Kind</label>
+              <select id="nm-kind">
+                <option value="move">Single Move (Vuelta)</option>
+                <option value="combination">Ordered Combination</option>
+              </select>
+
+              <label class="field-label" for="nm-styles">Style Tags (comma-separated)</label>
+              <input id="nm-styles" value="casino, rueda" placeholder="casino, rueda, timba">
+
+              <label class="field-label" for="nm-desc">Description / Cue</label>
+              <textarea id="nm-desc" rows="2"></textarea>
+
+              <div id="nm-combo-box" class="hidden">
+                <label class="field-label">Ordered Combination Steps</label>
+                <div class="inline-actions">
+                  <select id="nm-step-picker"></select>
+                  <button type="button" id="btn-nm-add-step" class="btn btn-secondary btn-sm">+ Step</button>
+                </div>
+                <ol id="nm-step-list"></ol>
+              </div>
+
+              <div class="inline-actions" style="margin-top:0.85rem">
+                <button type="submit" class="btn btn-primary">Save Move</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Portability JSON Export & Connection Settings -->
+      <section id="section-backup" class="hidden">
+        <div class="card">
+          <h2>JSON Portability Export &amp; Batch Import</h2>
+          <p class="helper-text">Download a complete JSON snapshot of your remote catalog (including moves, occurrences, and admin notes) or batch-ingest newline-separated URLs.</p>
+          <div class="inline-actions">
+            <button type="button" id="btn-export-json" class="btn btn-primary">Download Catalog JSON Backup</button>
+            <button type="button" id="btn-change-supabase" class="btn btn-ghost">Update Supabase Connection</button>
+          </div>
+
+          <div class="sub-section">
+            <h3>Batch Link Ingestion</h3>
+            <textarea id="batch-links-text" rows="5" placeholder="Paste one YouTube / TikTok / Facebook / Instagram URL per line"></textarea>
+            <div class="inline-actions">
+              <button type="button" id="btn-run-batch" class="btn btn-secondary">Ingest All Links</button>
+            </div>
+            <pre id="batch-report" class="helper-text" style="white-space:pre-wrap"></pre>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="../js/admin-app.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vueltario — Cuban Dance Move Catalog</title>
+  <meta name="description" content="Explore Cuban dance moves (vueltas) across casino, Timba, and rueda de casino with creator attribution and timed segments.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https: blob:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.tiktok.com https://www.facebook.com https://www.instagram.com; object-src 'none'; base-uri 'self';">
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="brand-block">
+      <h1 class="site-title">Vueltario</h1>
+      <span class="site-subtitle">Cuban Dance Move Catalog · Casino · Timba · Rueda de Casino</span>
+    </div>
+
+    <nav class="main-nav" aria-label="Catalog views">
+      <button type="button" class="nav-tab active" data-view="videos" id="tab-videos">Vuelta Videos</button>
+      <button type="button" class="nav-tab" data-view="dictionary" id="tab-dictionary">Move Dictionary</button>
+      <a href="https://www.instagram.com/cubansocial.sd/" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">@cubansocial.sd ↗</a>
+    </nav>
+  </header>
+
+  <main id="main-content" class="main-container" tabindex="-1">
+    <!-- Render-Only Video Catalog -->
+    <section id="view-videos">
+      <form id="public-filter-form" class="card filter-bar" role="search">
+        <div class="filter-group grow">
+          <label for="filter-q" class="sr-only">Search moves, aliases, titles, or creators</label>
+          <input id="filter-q" type="search" placeholder="Search move, regional alias (e.g. Sácala, Adiós), video title, or creator…">
+        </div>
+        <div class="filter-group">
+          <label for="filter-platform" class="sr-only">Filter by platform</label>
+          <select id="filter-platform">
+            <option value="">All platforms</option>
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-move" class="sr-only">Filter by move</label>
+          <select id="filter-move">
+            <option value="">All vueltas</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-style" class="sr-only">Filter by style</label>
+          <select id="filter-style">
+            <option value="">All styles</option>
+            <option value="casino">Casino</option>
+            <option value="rueda">Rueda de Casino</option>
+            <option value="timba">Timba</option>
+          </select>
+        </div>
+      </form>
+
+      <div class="catalog-split">
+        <div class="entry-list-pane" aria-label="Catalog videos">
+          <div id="public-entry-list" class="entry-list"></div>
+        </div>
+
+        <div class="entry-detail-pane" aria-label="Video player and demonstrated moves">
+          <div id="public-empty-state" class="card">
+            <p class="helper-text">Select a dance video to watch and jump directly to each demonstrated vuelta.</p>
+          </div>
+          <div id="public-detail-card" class="card hidden"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Render-Only Move Dictionary -->
+    <section id="view-dictionary" class="hidden">
+      <div class="card">
+        <h2>Cuban Dance Move Dictionary</h2>
+        <p class="helper-text">Canonical Spanish names, regional/school aliases, and ordered combinations.</p>
+        <div style="max-width:420px;margin:0.65rem 0 1rem">
+          <label for="dict-search" class="sr-only">Filter move dictionary</label>
+          <input id="dict-search" type="search" placeholder="Filter moves or aliases…">
+        </div>
+        <div id="public-dictionary-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    Vueltario — Curated Cuban dance reference supporting original creators · <a href="https://www.instagram.com/cubansocial.sd/" target="_blank" rel="noopener noreferrer">@cubansocial.sd</a>
+  </footer>
+
+  <script type="module" src="./js/public-app.js"></script>
+</body>
+</html>

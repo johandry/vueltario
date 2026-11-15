@@ -1,8 +1,7 @@
-.PHONY: build build-desktop run worker test migrate clean
+.PHONY: build build-desktop preview-site run worker test migrate clean
 
 BINARY := bin/vueltario
 DESKTOP_BINARY := bin/vueltario-desktop
-
 DESKTOP_TAGS := desktop,production
 
 build:
@@ -12,6 +11,9 @@ build:
 build-desktop:
 	@mkdir -p bin
 	CGO_ENABLED=1 go build -tags $(DESKTOP_TAGS) -o $(DESKTOP_BINARY) ./cmd/vueltario-desktop
+
+preview-site:
+	python3 -m http.server 8000 --directory site
 
 run: build
 	./$(BINARY) serve --with-worker

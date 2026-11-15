@@ -1,0 +1,23 @@
+name: Supabase Free-Tier Keepalive
+
+on:
+  schedule:
+    - cron: "17 8 */4 * *" # Every 4 days so a free-tier Supabase DB never pauses after 7 idle days
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query public moves count via PostgREST
+        env:
+          SUPABASE_URL: ${{ vars.VUELTARIO_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.VUELTARIO_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "VUELTARIO_SUPABASE_URL / VUELTARIO_SUPABASE_ANON_KEY not set yet; skipping ping."
+            exit 0
+          fi
+          curl -fsS "${SUPABASE_URL}/rest/v1/moves?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"

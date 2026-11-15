@@ -1,0 +1,12 @@
+{
+  "moves": [
+    { "id": "seed-1", "canonical_name": "Dile que no", "normalized_search_key": "dile que no", "portable_token": "DileQueNo", "style_tags": ["casino", "rueda"], "kind": "move", "curation_state": "curated", "aliases": [] },
+    { "id": "seed-2", "canonical_name": "Enchufla", "normalized_search_key": "enchufla", "portable_token": "Enchufla", "style_tags": ["casino", "rueda"], "kind": "move", "curation_state": "curated", "aliases": [{"alias": "Enchufe", "qualifier": "regional"}] },
+    { "id": "seed-3", "canonical_name": "Enchufla doble", "normalized_search_key": "enchufla doble", "portable_token": "EnchuflaDoble", "style_tags": ["casino", "rueda"], "kind": "move", "curation_state": "curated", "aliases": [] },
+    { "id": "seed-4", "canonical_name": "Setenta", "normalized_search_key": "setenta", "portable_token": "Setenta", "style_tags": ["casino", "rueda"], "kind": "move", "curation_state": "curated", "aliases": [{"alias": "70", "qualifier": "numeric"}] },
+    { "id": "seed-5", "canonical_name": "Exhibela", "normalized_search_key": "exhibela", "portable_token": "Exhibela", "style_tags": ["casino", "rueda"], "kind": "move", "curation_state": "curated", "aliases": [{"alias": "Sácala", "qualifier": "Havana/classic"}] },
+    { "id": "seed-6", "canonical_name": "Prima", "normalized_search_key": "prima", "portable_token": "Prima", "style_tags": ["casino", "rueda"], "kind": "move", "curation_state": "curated", "aliases": [{"alias": "Adiós", "qualifier": "Miami/rueda"}] },
+    { "id": "seed-7", "canonical_name": "Sombrero", "normalized_search_key": "sombrero", "portable_token": "Sombrero", "style_tags": ["casino", "rueda"], "kind": "move", "curation_state": "curated", "aliases": [] }
+  ],
+  "entries": []
+}

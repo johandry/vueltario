@@ -20,6 +20,7 @@ import (
 	"github.com/johandry/vueltario/internal/config"
 	"github.com/johandry/vueltario/internal/db"
 	"github.com/johandry/vueltario/internal/domain"
+	"github.com/johandry/vueltario/internal/storage"
 )
 
 type ProbeResult struct {
@@ -31,6 +32,7 @@ type ProbeResult struct {
 type Service struct {
 	cfg          config.Config
 	store        *db.Store
+	cloudStore   storage.ObjectStore
 	transcodeSem chan struct{}
 }
 
@@ -44,11 +46,34 @@ func NewService(cfg config.Config, store *db.Store) (*Service, error) {
 	if maxConc <= 0 {
 		maxConc = 2
 	}
+	var cloud storage.ObjectStore
+	switch cfg.StorageProvider {
+	case "r2":
+		if r2, err := storage.NewR2Store(storage.R2Config{
+			AccountID:       cfg.R2AccountID,
+			Endpoint:        cfg.R2Endpoint,
+			Bucket:          cfg.R2Bucket,
+			AccessKeyID:     cfg.R2AccessKeyID,
+			SecretAccessKey: cfg.R2SecretAccessKey,
+			PublicBaseURL:   cfg.R2PublicBaseURL,
+		}); err == nil {
+			cloud = r2
+		}
+	case "supabase":
+		if sb, err := storage.NewSupabaseStorage(cfg.SupabaseURL, cfg.SupabaseServiceKey, cfg.SupabaseServiceKey, cfg.SupabaseBucket); err == nil {
+			cloud = sb
+		}
+	}
 	return &Service{
 		cfg:          cfg,
 		store:        store,
+		cloudStore:   cloud,
 		transcodeSem: make(chan struct{}, maxConc),
 	}, nil
+}
+
+func (s *Service) CloudStore() storage.ObjectStore {
+	return s.cloudStore
 }
 
 // ResolvePath strictly resolves a relative storage_key inside StorageRoot, preventing directory traversal.
@@ -170,16 +195,29 @@ func (s *Service) ImportAuthorizedFile(ctx context.Context, req ImportRequest) (
 
 	shaHex := hex.EncodeToString(hasher.Sum(nil))
 	relKey := filepath.ToSlash(filepath.Join("blobs", shaHex[:2], shaHex+ext))
-	destPath, err := s.ResolvePath(relKey)
-	if err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
-		return nil, err
-	}
-	if _, statErr := os.Stat(destPath); os.IsNotExist(statErr) {
-		if err := os.Rename(quarantinePath, destPath); err != nil {
+	backend := "filesystem"
+
+	if s.cloudStore != nil {
+		rawBytes, rErr := os.ReadFile(quarantinePath)
+		if rErr != nil {
+			return nil, rErr
+		}
+		if uErr := s.cloudStore.Upload(ctx, relKey, mimeType, rawBytes); uErr != nil {
+			return nil, uErr
+		}
+		backend = s.cloudStore.ProviderName()
+	} else {
+		destPath, err := s.ResolvePath(relKey)
+		if err != nil {
 			return nil, err
+		}
+		if err := os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
+			return nil, err
+		}
+		if _, statErr := os.Stat(destPath); os.IsNotExist(statErr) {
+			if err := os.Rename(quarantinePath, destPath); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -188,7 +226,7 @@ func (s *Service) ImportAuthorizedFile(ctx context.Context, req ImportRequest) (
 		OwnerUserID:    req.User.ID,
 		AccessScope:    scope,
 		AssetKind:      "original",
-		StorageBackend: "filesystem",
+		StorageBackend: backend,
 		StorageKey:     relKey,
 		MIMEType:       mimeType,
 		ByteSize:       totalBytes,

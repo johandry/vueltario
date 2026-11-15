@@ -1,0 +1,56 @@
+name: Deploy Static Website to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Inject public Supabase configuration (if repository variables are set)
+        env:
+          SUPABASE_URL: ${{ vars.VUELTARIO_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.VUELTARIO_SUPABASE_ANON_KEY }}
+          R2_PUBLIC_URL: ${{ vars.VUELTARIO_R2_PUBLIC_URL }}
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+            cat > site/js/env.generated.js <<EOF
+          window.__VUELTARIO_SUPABASE_URL__ = "${SUPABASE_URL}";
+          window.__VUELTARIO_SUPABASE_ANON_KEY__ = "${SUPABASE_ANON_KEY}";
+          window.__VUELTARIO_R2_PUBLIC_URL__ = "${R2_PUBLIC_URL}";
+          EOF
+            sed -i 's|<script type="module" src="./js/public-app.js"></script>|<script src="./js/env.generated.js"></script>\n  <script type="module" src="./js/public-app.js"></script>|' site/index.html
+            sed -i 's|<script type="module" src="../js/admin-app.js"></script>|<script src="../js/env.generated.js"></script>\n  <script type="module" src="../js/admin-app.js"></script>|' site/admin/index.html
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./site"
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
