@@ -96,9 +96,12 @@ This starts PostgreSQL 16, runs migrations automatically, and separates the `ser
 ### Building & Launching
 
 ```bash
-# Option 1: Build standalone desktop binary via Go / Make
+# Option 1: Build standalone desktop binary via Make (passes required -tags desktop,production)
 make build-desktop
 ./bin/vueltario-desktop
+
+# Or directly with go build (Wails v2 requires CGO_ENABLED=1 and -tags desktop,production):
+CGO_ENABLED=1 go build -tags desktop,production -o bin/vueltario-desktop ./cmd/vueltario-desktop
 
 # Option 2: Package a native OS app bundle (.app on macOS / .exe on Windows) when the Wails v2 CLI is installed
 go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
