@@ -246,9 +246,14 @@ input[type="checkbox"] {
 
 .catalog-split {
   display: grid;
-  grid-template-columns: 1fr minmax(310px, 380px);
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 380px);
   gap: 1.25rem;
   align-items: start;
+}
+
+.entry-list-pane,
+.entry-detail-pane {
+  min-width: 0;
 }
 
 .taxonomy-layout {
@@ -300,6 +305,8 @@ input[type="checkbox"] {
   font-size: 0.96rem;
   margin: 0 0 0.25rem;
   color: var(--text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .badge {
@@ -393,6 +400,21 @@ input[type="checkbox"] {
   background: var(--surface-alt);
   border-radius: 8px;
   margin-bottom: 0.9rem;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.attribution-bar > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.attribution-bar strong {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .timing-toolbar {
@@ -426,6 +448,9 @@ input[type="checkbox"] {
   border: 1px solid var(--border);
   border-radius: 8px;
   margin-bottom: 0.45rem;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .occ-time {

@@ -267,9 +267,14 @@ input, select, textarea {
 
 .catalog-split {
   display: grid;
-  grid-template-columns: 1fr minmax(360px, 460px);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
   gap: 1.25rem;
   align-items: start;
+}
+
+.entry-list-pane,
+.entry-detail-pane {
+  min-width: 0;
 }
 
 @media (max-width: 940px) {
@@ -402,6 +407,15 @@ input, select, textarea {
   background: var(--surface-alt);
   border-radius: 8px;
   margin-bottom: 0.9rem;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.attribution-bar > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .timing-toolbar {
