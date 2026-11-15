@@ -78,6 +78,8 @@ func (a *App) Run(ctx context.Context, args []string) int {
 		return a.cmdMedia(ctx, rest)
 	case "publish":
 		return a.cmdPublish(ctx, rest)
+	case "ai":
+		return a.cmdAI(ctx, rest)
 	default:
 		fmt.Fprintf(a.Stderr, "unknown command %q\n\n", sub)
 		a.printUsage()
@@ -100,6 +102,7 @@ Commands:
   catalog         Manage personal/public catalog (list, show, moves, add-occurrence, export, backup, restore)
   media           Manage authorized media & rights (import, rights-add, rights-revoke, orphan-scan)
   publish         Instagram @cubansocial.sd workflow (draft, preview, approve, run, status, reconcile)
+  ai              AI metadata & vuelta extractor (prompt, apply, frames, run-agent; supports --supabase)
 `)
 }
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/johandry/vueltario/internal/aiassist"
 	"github.com/johandry/vueltario/internal/analysis"
 	"github.com/johandry/vueltario/internal/config"
 	"github.com/johandry/vueltario/internal/db"
@@ -473,6 +474,62 @@ func (a *App) ReconcilePublication(pubID, manualResultURL string, retryFirstComm
 		return nil, err
 	}
 	return a.pubSvc.Reconcile(a.opCtx(), admin, pubID, manualResultURL, retryFirstComment)
+}
+
+// --- AI Metadata & Vuelta Extraction (Shared Go Core for Wails Desktop) ---
+
+func (a *App) GenerateAIExtractionPrompt(entryID, extraContext, localVideoPath string) (string, error) {
+	admin, err := a.requireAdmin()
+	if err != nil {
+		return "", err
+	}
+	ent, err := a.store.GetEntry(a.opCtx(), admin.ID, entryID)
+	if err != nil {
+		return "", err
+	}
+	tax, err := aiassist.LoadTaxonomyFromStore(a.opCtx(), a.store)
+	if err != nil {
+		return "", err
+	}
+	var frames []string
+	if strings.TrimSpace(localVideoPath) != "" {
+		sampled, fErr := aiassist.SampleVideoFrames(a.opCtx(), a.cfg.FFmpegBinary, strings.TrimSpace(localVideoPath), "./data/ai-frames", 4, 8)
+		if fErr != nil {
+			return "", fErr
+		}
+		frames = sampled
+	}
+	title := ""
+	if ent.PersonalTitleOverride != nil {
+		title = *ent.PersonalTitleOverride
+	} else if ent.Source.Title != nil {
+		title = *ent.Source.Title
+	}
+	return aiassist.BuildExtractionPrompt(aiassist.PromptSourceInfo{
+		EntryID:      ent.ID,
+		OriginalURL:  ent.Source.OriginalURL,
+		CanonicalURL: ent.Source.CanonicalURL,
+		Platform:     string(ent.Source.Platform),
+		CurrentTitle: title,
+		ExtraContext: extraContext,
+		FramePaths:   frames,
+	}, tax), nil
+}
+
+func (a *App) ApplyAIExtractionJSON(entryID, rawJSON string, replaceOccurrences bool) (*domain.CatalogEntry, error) {
+	admin, err := a.requireAdmin()
+	if err != nil {
+		return nil, err
+	}
+	tax, err := aiassist.LoadTaxonomyFromStore(a.opCtx(), a.store)
+	if err != nil {
+		return nil, err
+	}
+	parsed, err := aiassist.ParseAndValidateExtraction(rawJSON, tax)
+	if err != nil {
+		return nil, err
+	}
+	return aiassist.ApplyToStore(a.opCtx(), a.store, admin, entryID, parsed, replaceOccurrences)
 }
 
 func generatePKCEPair() (verifier string, challenge string, err error) {

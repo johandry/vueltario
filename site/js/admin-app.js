@@ -4,6 +4,7 @@
 // add/update/delete move occurrences + start/end timing (player mark or MM:SS.mmm), video/music rights, R2/Supabase video URLs, and taxonomy.
 
 import { isSupabaseConfigured } from './config.js';
+import { buildAIExtractionPrompt, parseAIExtractionJSON } from './ai-assist.js';
 import {
   getSupabaseClient,
   el,
@@ -425,6 +426,9 @@ function renderDetail(preservePlayer = false) {
     )
   );
 
+  // AI Metadata & Vuelta Extraction Assistant (Copy Prompt -> ChatGPT/Claude/Local Agent -> Paste JSON & Save)
+  pane.appendChild(renderAIExtractionPanel(entry));
+
   // Add Occurrence Form
   const moveSelect = el('select', { 'aria-label': 'Canonical move' }, el('option', { value: '' }, '— Select canonical move —'));
   for (const m of state.moves) {
@@ -723,6 +727,221 @@ function renderDetail(preservePlayer = false) {
       )
     )
   );
+}
+
+// --- AI Extraction Assistant Panel (Option 1: Prompt Generator + Reviewed JSON Importer) ---
+
+function renderAIExtractionPanel(entry) {
+  const details = el('details', {
+    className: 'sub-section',
+    style: 'background:var(--surface-alt);padding:0.75rem;border-radius:8px;margin-bottom:0.95rem;border-top:0;margin-top:0',
+  });
+  const summary = el(
+    'summary',
+    { style: 'cursor:pointer;font-weight:700;color:var(--accent)' },
+    '✨ AI Metadata & Vuelta Extractor (ChatGPT / Claude / Local Agent)'
+  );
+  details.appendChild(summary);
+
+  const extraCtxIn = el('textarea', {
+    rows: 2,
+    placeholder: 'Optional: paste raw post caption, comments, or notes here to include in the prompt…',
+  });
+  const promptOut = el(
+    'textarea',
+    {
+      rows: 6,
+      readOnly: true,
+      style: 'font-family:var(--font-mono);font-size:0.78rem;margin-top:0.4rem',
+      'aria-label': 'Generated AI prompt',
+    },
+    buildAIExtractionPrompt(entry, state.moves, '')
+  );
+
+  extraCtxIn.addEventListener('input', () => {
+    promptOut.value = buildAIExtractionPrompt(entry, state.moves, extraCtxIn.value);
+  });
+
+  const btnCopyPrompt = el(
+    'button',
+    {
+      type: 'button',
+      className: 'btn btn-secondary btn-sm',
+      onclick: async () => {
+        promptOut.value = buildAIExtractionPrompt(entry, state.moves, extraCtxIn.value);
+        try {
+          await navigator.clipboard.writeText(promptOut.value);
+          toast('AI prompt copied! Paste it into ChatGPT, Claude, or your local agent (+ attach screenshot if on-screen text is visible).');
+        } catch {
+          promptOut.select();
+          toast('Prompt selected — press Cmd+C / Ctrl+C to copy.');
+        }
+      },
+    },
+    '📋 Copy AI Prompt'
+  );
+
+  const jsonInput = el('textarea', {
+    rows: 5,
+    placeholder: 'Paste the JSON response from ChatGPT / Claude / local agent here…',
+    style: 'font-family:var(--font-mono);font-size:0.8rem',
+    'aria-label': 'AI JSON response',
+  });
+  const replaceOccsChk = el('input', { type: 'checkbox', checked: false });
+  const previewBox = el('div', { className: 'helper-text', style: 'margin-top:0.45rem' });
+
+  let parsedPreview = null;
+
+  const renderPreview = () => {
+    previewBox.replaceChildren();
+    if (!jsonInput.value.trim()) {
+      parsedPreview = null;
+      return;
+    }
+    try {
+      parsedPreview = parseAIExtractionJSON(jsonInput.value, state.moves);
+      const summaryLines = [];
+      if (parsedPreview.title) summaryLines.push(`Title: ${parsedPreview.title}`);
+      if (parsedPreview.creatorName) {
+        summaryLines.push(
+          `Creator: ${parsedPreview.creatorName}${parsedPreview.creatorHandle ? ` (@${parsedPreview.creatorHandle})` : ''} [${parsedPreview.creatorRole}]`
+        );
+      }
+      if (parsedPreview.durationMs !== null) summaryLines.push(`Duration: ${formatMs(parsedPreview.durationMs)}`);
+
+      const moveBadges = el('div', { className: 'chip-list' });
+      for (const occ of parsedPreview.occurrences) {
+        const timePart = occ.startMs !== null ? ` (${formatMs(occ.startMs)}${occ.endMs !== null ? '–' + formatMs(occ.endMs) : ''})` : '';
+        moveBadges.appendChild(
+          el(
+            'span',
+            { className: occ.isNewMove ? 'badge badge-warning' : 'move-chip' },
+            `${occ.isNewMove ? '+ New Move: ' : '✓ '}${occ.moveName}${timePart}`
+          )
+        );
+      }
+
+      previewBox.appendChild(
+        el(
+          'div',
+          { style: 'padding:0.5rem;background:#fff;border:1px solid var(--border);border-radius:6px' },
+          el('strong', {}, `Parsed OK — ${parsedPreview.occurrences.length} vuelta(s) ready to apply:`),
+          summaryLines.length ? el('div', {}, summaryLines.join(' · ')) : null,
+          moveBadges
+        )
+      );
+    } catch (err) {
+      parsedPreview = null;
+      previewBox.appendChild(el('span', { style: 'color:var(--danger);font-weight:600' }, err.message));
+    }
+  };
+
+  jsonInput.addEventListener('input', renderPreview);
+
+  const btnApplyAI = el(
+    'button',
+    {
+      type: 'button',
+      className: 'btn btn-primary btn-sm',
+      onclick: async () => {
+        try {
+          const result = parsedPreview || parseAIExtractionJSON(jsonInput.value, state.moves);
+          await applyAIExtractionToSupabase(entry, result, replaceOccsChk.checked);
+          jsonInput.value = '';
+          previewBox.replaceChildren();
+          toast(`Applied AI metadata & ${result.occurrences.length} vuelta(s) to Supabase.`);
+        } catch (err) {
+          toast(err.message, true);
+        }
+      },
+    },
+    '✓ Apply AI JSON & Save to DB'
+  );
+
+  details.appendChild(
+    el(
+      'div',
+      { style: 'margin-top:0.65rem' },
+      el('p', { className: 'helper-text' }, '1. Copy this taxonomy-aware prompt and send it to ChatGPT, Claude, or a local vision agent (attach a screenshot of the video if moves/creator appear as on-screen text).'),
+      extraCtxIn,
+      promptOut,
+      el('div', { className: 'inline-actions' }, btnCopyPrompt),
+      el('p', { className: 'helper-text', style: 'margin-top:0.75rem' }, '2. Paste the returned JSON below, review the matched/new moves, and save directly to Supabase:'),
+      jsonInput,
+      previewBox,
+      el(
+        'div',
+        { className: 'inline-actions' },
+        el('label', { className: 'inline-actions helper-text' }, replaceOccsChk, ' Replace existing occurrences on this video (instead of appending)'),
+        btnApplyAI
+      )
+    )
+  );
+
+  return details;
+}
+
+async function applyAIExtractionToSupabase(entry, aiData, replaceExistingOccurrences) {
+  let creatorId = entry.creator_id;
+  if (aiData.creatorName) {
+    creatorId = await upsertCreatorWithIdentity({
+      displayName: aiData.creatorName,
+      platform: entry.platform,
+      handle: aiData.creatorHandle || '',
+      profileUrl: aiData.creatorProfileUrl || '',
+      verified: false,
+    });
+  }
+
+  const updateFields = {};
+  if (aiData.title) updateFields.title = aiData.title;
+  if (creatorId) {
+    updateFields.creator_id = creatorId;
+    updateFields.creator_role = aiData.creatorRole || 'uploader';
+  }
+  if (aiData.durationMs !== null) updateFields.duration_ms = aiData.durationMs;
+  if (aiData.publicComment !== null) updateFields.public_comment = aiData.publicComment;
+
+  if (Object.keys(updateFields).length > 0) {
+    const { error: upErr } = await state.sb.from('entries').update(updateFields).eq('id', entry.id);
+    if (upErr) throw new Error(upErr.message);
+  }
+
+  if (aiData.privateNotes) {
+    const mergedNotes = entry.private_notes
+      ? `${entry.private_notes}\n[AI]: ${aiData.privateNotes}`
+      : aiData.privateNotes;
+    const { error: nErr } = await state.sb.from('admin_entry_notes').upsert({
+      entry_id: entry.id,
+      private_notes: mergedNotes,
+    });
+    if (nErr) throw new Error(nErr.message);
+  }
+
+  if (replaceExistingOccurrences && aiData.occurrences.length > 0) {
+    const { error: delErr } = await state.sb.from('occurrences').delete().eq('entry_id', entry.id);
+    if (delErr) throw new Error(delErr.message);
+  }
+
+  let baseOrdinal = replaceExistingOccurrences ? 0 : entry.occurrences.length;
+  for (const occ of aiData.occurrences) {
+    baseOrdinal += 1;
+    const moveId = await ensureMoveByName(occ.moveName);
+    const { error: occErr } = await state.sb.from('occurrences').insert({
+      entry_id: entry.id,
+      move_id: moveId,
+      proposed_name: occ.isNewMove ? occ.moveName : null,
+      start_ms: occ.startMs,
+      end_ms: occ.endMs,
+      ordinal: baseOrdinal,
+      notes: occ.notes || '',
+      state: 'confirmed',
+      timing_method: occ.startMs !== null ? 'suggested' : 'unknown',
+    });
+    if (occErr) throw new Error(occErr.message);
+  }
+
+  await refreshAll(entry.id);
 }
 
 // --- Taxonomy Helpers & Editor ---

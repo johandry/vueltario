@@ -124,8 +124,11 @@ async function populateEditor(pub) {
 async function loadCatalogEntries() {
   uiState.entries = (await bridge().ListCatalogEntries('', '')) || [];
   const box = document.getElementById('catalog-batch-list');
+  const aiSel = document.getElementById('ai-entry-select');
   box.replaceChildren();
+  aiSel.replaceChildren();
   for (const ent of uiState.entries) {
+    const labelText = `[${ent.source.platform}] ${ent.personal_title_override || ent.source.title || ent.source.canonical_url}`;
     const row = document.createElement('label');
     row.className = 'queue-item row';
     const chk = document.createElement('input');
@@ -133,9 +136,14 @@ async function loadCatalogEntries() {
     chk.dataset.entryId = ent.id;
     chk.dataset.assetId = ent.assets?.[0]?.id || '';
     const txt = document.createElement('span');
-    txt.textContent = `[${ent.source.platform}] ${ent.personal_title_override || ent.source.title || ent.source.canonical_url}`;
+    txt.textContent = labelText;
     row.append(chk, txt);
     box.appendChild(row);
+
+    const opt = document.createElement('option');
+    opt.value = ent.id;
+    opt.textContent = labelText;
+    aiSel.appendChild(opt);
   }
 }
 
@@ -322,6 +330,40 @@ function wireEvents() {
       await refreshQueue();
       switchPanel('queue');
       notify(`Batch drafts created: ${res.created} succeeded, ${res.failed} isolated failures.`);
+    } catch (err) {
+      notify(String(err), true);
+    }
+  });
+
+  document.getElementById('btn-gen-ai-prompt').addEventListener('click', async () => {
+    const entryId = document.getElementById('ai-entry-select').value;
+    if (!entryId) return notify('Select a catalog entry first.', true);
+    try {
+      const prompt = await bridge().GenerateAIExtractionPrompt(
+        entryId,
+        document.getElementById('ai-extra-ctx').value,
+        document.getElementById('ai-video-path').value
+      );
+      document.getElementById('ai-prompt-out').value = prompt;
+      await navigator.clipboard?.writeText(prompt).catch(() => {});
+      notify('AI prompt generated and copied to clipboard.');
+    } catch (err) {
+      notify(String(err), true);
+    }
+  });
+
+  document.getElementById('btn-apply-ai-json').addEventListener('click', async () => {
+    const entryId = document.getElementById('ai-entry-select').value;
+    if (!entryId) return notify('Select a catalog entry first.', true);
+    try {
+      await bridge().ApplyAIExtractionJSON(
+        entryId,
+        document.getElementById('ai-json-in').value,
+        document.getElementById('ai-replace-occs').checked
+      );
+      document.getElementById('ai-json-in').value = '';
+      await loadCatalogEntries();
+      notify('AI metadata & vueltas validated and saved.');
     } catch (err) {
       notify(String(err), true);
     }

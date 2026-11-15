@@ -51,6 +51,7 @@ VALUES ('<YOUR-AUTH-USER-UUID>', 'you@example.com', 'Johandry');
 - **Landing page (`/` → [`site/index.html`](./site/index.html)):** Live at [https://www.johandry.com/vueltario/](https://www.johandry.com/vueltario/) *(and [https://vueltario.com](https://vueltario.com) once DNS is connected)*. Strictly **render-only**: visitors search canonical Spanish move names or regional aliases, filter by platform/style, watch embedded YouTube/TikTok/Facebook/Instagram players or hosted R2/Supabase videos, jump to timed move segments, and follow original creators. There is **no** Sign In button and **no** link to `/admin`.
 - **Hidden Admin Studio (`.../admin` → [`site/admin/index.html`](./site/admin/index.html)):** Navigate directly to `https://www.johandry.com/vueltario/admin/` *(or `https://vueltario.com/admin` / `http://localhost:8000/admin/` locally)*. Prompts immediately for Supabase Auth email + password, verifies membership in `public.admin_users`, and unlocks:
   - Saving & deduplicating YouTube, TikTok, Facebook, and Instagram URLs (plus automatic YouTube/TikTok oEmbed metadata lookup and batch URL import)
+  - **✨ AI Metadata & Vuelta Extractor:** One-click taxonomy-grounded prompt generator for ChatGPT, Claude, or local vision agents (supports screenshots of on-screen text overlays + pasted captions/comments) and live-preview JSON importer that maps aliases (`70` → `Setenta`) and creates new moves automatically
   - Live player **Mark Start `[`** / **Mark End `]`** / **Preview `P`** and manual `MM:SS.mmm` timing
   - Inline editing & deletion of move occurrences, segment notes, public comments, private admin notes, creator attribution, and video/music rights records
   - Move taxonomy management (canonical moves, regional aliases with collision detection, and ordered combinations)
@@ -154,6 +155,12 @@ make build
 ./bin/vueltario publish run --dry-run <PUB_ID>
 ./bin/vueltario publish run --idempotency-key run-001 <PUB_ID>
 ./bin/vueltario publish reconcile --retry-comment <PUB_ID>
+
+# AI Metadata & Vuelta Extractor (works with remote --supabase or local DB + optional ffmpeg frame sampling)
+./bin/vueltario ai prompt --entry "https://www.facebook.com/reel/1507199801474207" --supabase
+./bin/vueltario ai prompt --entry <ENTRY_ID> --video ./reel.mp4 --supabase | pbcopy
+./bin/vueltario ai apply --entry "https://www.facebook.com/reel/1507199801474207" --supabase --in ai-output.json
+./bin/vueltario ai run-agent --entry <ENTRY_ID> --supabase --video ./reel.mp4 --bin ollama --args "run qwen2.5vl"
 ```
 
 ---

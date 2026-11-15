@@ -15,6 +15,7 @@
     <nav class="tabs" aria-label="Studio navigation">
       <button type="button" class="tab active" data-panel="queue">Queue &amp; Draft Editor</button>
       <button type="button" class="tab" data-panel="batch">Batch Workflows</button>
+      <button type="button" class="tab" data-panel="ai">AI Extractor</button>
       <button type="button" class="tab" data-panel="history">Publication History</button>
     </nav>
     <div class="session-box">
@@ -141,7 +142,30 @@
       </div>
     </section>
 
-    <!-- Panel 3: Publication History -->
+    <!-- Panel 3: AI Metadata & Vuelta Extractor -->
+    <section id="panel-ai" class="panel hidden">
+      <div class="split-grid">
+        <div class="card stack">
+          <h2>1. Generate Taxonomy-Aware AI Prompt</h2>
+          <p class="muted">Select a catalog entry (and optionally sample frames from a local video via ffmpeg) to generate a prompt for ChatGPT, Claude, or a local vision agent.</p>
+          <select id="ai-entry-select"></select>
+          <input id="ai-video-path" placeholder="Optional local MP4 path to sample frames (e.g. ./clip.mp4)">
+          <textarea id="ai-extra-ctx" rows="3" placeholder="Optional pasted caption or comments"></textarea>
+          <button type="button" id="btn-gen-ai-prompt" class="btn btn-primary">Generate &amp; Copy Prompt</button>
+          <textarea id="ai-prompt-out" rows="8" readonly placeholder="Generated prompt appears here…"></textarea>
+        </div>
+
+        <div class="card stack">
+          <h2>2. Apply AI JSON Response</h2>
+          <p class="muted">Paste the JSON returned by your AI agent to update creator attribution, title, comments, and demonstrated vueltas.</p>
+          <textarea id="ai-json-in" rows="10" placeholder="Paste AI JSON response here…"></textarea>
+          <label class="row muted"><input type="checkbox" id="ai-replace-occs"> Replace existing occurrences on this entry</label>
+          <button type="button" id="btn-apply-ai-json" class="btn btn-primary">Validate &amp; Apply to Entry</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 4: Publication History -->
     <section id="panel-history" class="panel hidden">
       <div class="card">
         <h2>Publication &amp; Handoff History</h2>
