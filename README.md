@@ -25,6 +25,8 @@ Instagram @cubansocial.sd Publishers (Shared Publishing Rules + Cloudflare R2 / 
 
 ## 1. Supabase Setup (Database + Auth + RLS)
 
+> For a complete step-by-step walkthrough tailored to the `johandry` GitHub user and Supabase organization, see [**`docs/Supabase-Setup.md`**](./docs/Supabase-Setup.md).
+
 1. Create a Supabase project at [supabase.com](https://supabase.com).
 2. Open **SQL Editor** and execute [`supabase/migrations/0001_vueltario_supabase.sql`](./supabase/migrations/0001_vueltario_supabase.sql).
    - Creates `admin_users`, `creators`, `creator_identities`, `moves`, `move_aliases`, `combination_steps`, `entries`, `admin_entry_notes`, `occurrences`, `media_assets`, `rights_records`, and `publication_jobs`.
