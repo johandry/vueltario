@@ -267,8 +267,8 @@ input, select, textarea {
 
 .catalog-split {
   display: grid;
-  grid-template-columns: minmax(300px, 390px) 1fr;
-  gap: 1.1rem;
+  grid-template-columns: 1fr minmax(360px, 460px);
+  gap: 1.25rem;
   align-items: start;
 }
 
@@ -366,21 +366,24 @@ input, select, textarea {
 
 .player-stage {
   background: #141413;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto 0.75rem;
   min-height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.65rem;
 }
 .player-iframe, .player-video {
   width: 100%;
-  min-height: 360px;
+  min-height: 240px;
   border: 0;
 }
 .player-iframe-portrait {
-  width: min(100%, 360px);
+  width: 100%;
+  max-width: 360px;
   height: 640px;
 }
 .player-fallback {

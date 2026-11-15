@@ -64,6 +64,7 @@ export class PlayerBridge {
     ) {
       const isPortrait = descriptor.orientation === 'portrait';
       this.containerEl.classList.toggle('player-stage-portrait', isPortrait);
+      this.containerEl.classList.toggle('player-stage-landscape', !isPortrait);
 
       const iframe = document.createElement('iframe');
       let src = descriptor.embedUrl;

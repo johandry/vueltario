@@ -246,8 +246,8 @@ input[type="checkbox"] {
 
 .catalog-split {
   display: grid;
-  grid-template-columns: minmax(300px, 400px) 1fr;
-  gap: 1.1rem;
+  grid-template-columns: 1fr minmax(360px, 460px);
+  gap: 1.25rem;
   align-items: start;
 }
 
@@ -340,16 +340,22 @@ input[type="checkbox"] {
 
 .player-stage {
   background: #141413;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto 0.75rem;
   min-height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.65rem;
+}
+.player-stage-landscape {
+  max-width: 100%;
 }
 .player-stage-portrait {
-  padding: 0.5rem 0;
+  max-width: 360px;
+  padding: 0;
 }
 .player-video {
   width: 100%;
@@ -363,14 +369,14 @@ input[type="checkbox"] {
 .player-iframe-landscape {
   width: 100%;
   aspect-ratio: 16 / 9;
-  min-height: 360px;
-  max-height: 540px;
+  min-height: 240px;
+  max-height: 460px;
 }
 .player-iframe-portrait {
-  width: min(100%, 360px);
+  width: 100%;
+  max-width: 360px;
   height: 640px;
   aspect-ratio: 9 / 16;
-  border-radius: 6px;
 }
 .player-fallback {
   padding: 1.5rem;
