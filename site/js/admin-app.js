@@ -3,7 +3,7 @@
 // Supports full CRUD: ingest/deduplicate links, update title/description/public comment/private notes, creator attribution,
 // add/update/delete move occurrences + start/end timing (player mark or MM:SS.mmm), video/music rights, R2/Supabase video URLs, and taxonomy.
 
-import { isSupabaseConfigured, saveLocalSupabaseOverride } from './config.js';
+import { isSupabaseConfigured } from './config.js';
 import {
   getSupabaseClient,
   el,
@@ -43,7 +43,7 @@ function toast(msg, isError = false) {
 async function init() {
   wireStaticEvents();
   if (!isSupabaseConfigured()) {
-    showViewState('setup');
+    toast('Supabase project URL/publishable key missing in site/js/config.js.', true);
     return;
   }
   state.sb = await getSupabaseClient();
@@ -57,7 +57,6 @@ async function init() {
 }
 
 function showViewState(mode) {
-  document.getElementById('supabase-setup-card').classList.toggle('hidden', mode !== 'setup');
   document.getElementById('admin-login-gate').classList.toggle('hidden', mode !== 'login');
   document.getElementById('admin-workspace').classList.toggle('hidden', mode !== 'workspace');
   document.getElementById('admin-nav').classList.toggle('hidden', mode !== 'workspace');
@@ -848,18 +847,6 @@ function renderTaxonomyList() {
 // --- Static Event Wiring ---
 
 function wireStaticEvents() {
-  document.getElementById('form-supabase-config').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    saveLocalSupabaseOverride(
-      document.getElementById('cfg-supabase-url').value,
-      document.getElementById('cfg-supabase-key').value
-    );
-    window.location.reload();
-  });
-
-  document.getElementById('btn-reset-conn').addEventListener('click', () => showViewState('setup'));
-  document.getElementById('btn-change-supabase').addEventListener('click', () => showViewState('setup'));
-
   document.getElementById('form-admin-login').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     try {

@@ -197,7 +197,7 @@ VUELTARIO_SUPABASE_BUCKET=vueltario-media
    - Click **Move Dictionary** and verify the 21 seeded Cuban dance moves load directly from your remote Supabase database.
 
 3. Open [`http://localhost:8000/admin/`](http://localhost:8000/admin/):
-   - Enter your `https://<PROJECT_REF>.supabase.co` URL and `anon` key on the one-time local connection prompt.
+   - It goes straight to **Administrator Sign In** (your public Supabase URL and `sb_publishable_...` key are pre-configured in `site/js/config.js` and protected by PostgreSQL Row-Level Security).
    - Sign in with the admin email & password you created in **Step 4.2**.
    - Paste a YouTube or TikTok dance tutorial URL → click **Save Video Link** → mark a move's start/end timestamps (`[` / `]`) → click **Save Video Updates**.
 

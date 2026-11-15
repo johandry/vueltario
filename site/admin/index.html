@@ -32,22 +32,7 @@
   <div id="admin-toast" class="status-banner hidden" role="status" aria-live="polite"></div>
 
   <main id="admin-main" class="main-container" tabindex="-1">
-    <!-- Supabase Connection Setup (shown only if SUPABASE_URL / ANON_KEY were not injected at build time) -->
-    <section id="supabase-setup-card" class="card login-gate-card hidden">
-      <h2>Connect Remote Supabase Project</h2>
-      <p class="helper-text">Enter your Supabase Project URL and public <code>anon</code> key. Row-Level Security protects all writes until you sign in as an administrator.</p>
-      <form id="form-supabase-config">
-        <label class="field-label" for="cfg-supabase-url">Supabase Project URL</label>
-        <input id="cfg-supabase-url" type="url" required placeholder="https://xyzcompany.supabase.co">
-        <label class="field-label" for="cfg-supabase-key">Supabase Public Anon Key</label>
-        <input id="cfg-supabase-key" required placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
-        <div class="inline-actions" style="margin-top:0.9rem">
-          <button type="submit" class="btn btn-primary">Save Connection</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- Authentication Gate -->
+    <!-- Authentication Gate (Directly asks for email & password — no URL/key step) -->
     <section id="admin-login-gate" class="card login-gate-card hidden">
       <h2>Administrator Sign In</h2>
       <p class="helper-text">Authenticate with your Supabase administrator account to add, edit, time, or delete vuelta videos and moves.</p>
@@ -58,7 +43,6 @@
         <input id="admin-password" type="password" required autocomplete="current-password">
         <div class="inline-actions" style="margin-top:0.9rem">
           <button type="submit" class="btn btn-primary">Sign In</button>
-          <button type="button" id="btn-reset-conn" class="btn btn-ghost btn-sm">Change Supabase URL</button>
         </div>
       </form>
     </section>
@@ -167,7 +151,6 @@
           <p class="helper-text">Download a complete JSON snapshot of your remote catalog (including moves, occurrences, and admin notes) or batch-ingest newline-separated URLs.</p>
           <div class="inline-actions">
             <button type="button" id="btn-export-json" class="btn btn-primary">Download Catalog JSON Backup</button>
-            <button type="button" id="btn-change-supabase" class="btn btn-ghost">Update Supabase Connection</button>
           </div>
 
           <div class="sub-section">
